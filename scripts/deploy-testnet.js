@@ -1,0 +1,17 @@
+const hre = require("hardhat");
+
+async function main() {
+  const Wido = await ethers.getContractFactory("Wido");
+  const wido = await upgrades.deployProxy(Wido, [5]);
+
+  await wido.deployed();
+
+  console.log("Wido deployed to:", wido.address);
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

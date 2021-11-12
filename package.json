@@ -1,0 +1,26 @@
+{
+  "name": "hardhat-project",
+  "scripts": {
+    "deploy-local": "npx hardhat run scripts/deploy-local.js --network localhost",
+    "deploy-prep-local": "npx hardhat run scripts/deploy-local.js --network localhost && npx hardhat run scripts/prep-local.js --network localhost",
+    "prep-local": "npx hardhat run scripts/prep-local.js --network localhost"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.7",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@openzeppelin/hardhat-upgrades": "^1.10.0",
+    "chai": "^4.3.4",
+    "dotenv": "^10.0.0",
+    "ethereum-waffle": "^3.4.0",
+    "ethers": "^5.4.7",
+    "hardhat": "^2.6.4",
+    "hardhat-contract-sizer": "^2.1.1",
+    "hardhat-etherscan-abi": "^0.1.1"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^0.2.1",
+    "@openzeppelin/contracts-upgradeable": "^4.3.2",
+    "lite-server": "^2.6.1"
+  }
+}
