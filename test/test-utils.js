@@ -88,7 +88,6 @@ async function prepForYUSDC(walletAddress, amount) {
     });
     const signer = await ethers.getSigner(yUSDCWhaleAddress);
     const contract = await getVaultContract("0x597aD1e0c13Bfe8025993D9e79C69E1c0233522e", signer);
-    console.log((await contract.balanceOf(yUSDCWhaleAddress)).toString());
     await contract.transfer(walletAddress, ethers.utils.parseUnits(amount, 6).toString());
 }
 
@@ -100,7 +99,6 @@ async function prepFor3CRV(walletAddress, amount) {
     });
     const signer = await ethers.getSigner(y3CrvWhaleAddress);
     const contract = await getVaultContract("0x84E13785B5a27879921D6F685f041421C7F482dA", signer);
-    console.log((await contract.balanceOf(y3CrvWhaleAddress)).toString());
     await contract.transfer(walletAddress, ethers.utils.parseUnits(amount, 18).toString());
 }
 
@@ -157,6 +155,15 @@ const swapType = [
     { name: "expiration", type: "uint32" }
 ]
 
+const withdrawType = [
+    { name: "user", type: "address" },
+    { name: "vault", type: "address" },
+    { name: "amount", type: "uint256" },
+    { name: "token", type: "address" },
+    { name: "nonce", type: "uint32" },
+    { name: "expiration", type: "uint32" }
+]
+
 const depositDomainData = {
     name: "Wido",
     version: "1",
@@ -166,6 +173,13 @@ const depositDomainData = {
 
 const swapDomainData = {
     name: "WidoSwap",
+    version: "1",
+    chainId: 1,
+    verifyingContract: "0xf4B146FbA71F41E0592668ffbF264F1D186b2Ca8",  // TODO: Change verifying contract
+};
+
+const withdrawDomainData = {
+    name: "WidoWithdraw",
     version: "1",
     chainId: 1,
     verifyingContract: "0xf4B146FbA71F41E0592668ffbF264F1D186b2Ca8",  // TODO: Change verifying contract
@@ -230,4 +244,27 @@ async function buildAndSignSwapRequest(signer, request) {
     }
 }
 
-module.exports = { prepForEth, prepForUSDC, prepForDai, prepForYUSDC, approveWidoForUSDC, approveWidoForDai, approveWidoForVault, buildAndSignDepositRequest, getVaultContract, getUSDCContract, prepFor3CRV, prepForToken, getERC20Contract, buildAndSignSwapRequest };
+async function buildAndSignWithdrawRequest(signer, request) {
+    const data = JSON.stringify({
+        types: {
+            EIP712Domain: domainType,
+            Withdraw: withdrawType,
+        },
+        domain: withdrawDomainData,
+        primaryType: "Withdraw",
+        message: request
+    });
+
+    const params = [signer.address, data];
+    const method = 'eth_signTypedData_v4';
+
+    const signature = _parseSignature(await signer.provider.send(method, params));
+    return {
+        withdraw: request,
+        v: signature.v,
+        r: signature.r,
+        s: signature.s,
+    }
+}
+
+module.exports = { prepForEth, prepForUSDC, prepForDai, prepForYUSDC, approveWidoForUSDC, approveWidoForDai, approveWidoForVault, buildAndSignDepositRequest, getVaultContract, getUSDCContract, prepFor3CRV, prepForToken, getERC20Contract, buildAndSignSwapRequest, buildAndSignWithdrawRequest };

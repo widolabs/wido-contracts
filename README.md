@@ -3,6 +3,7 @@
 ## Deployed Contracts
 Wido.sol: [`0x7Bbd6348db83C2fb3633Eebb70367E1AEc258764`](https://etherscan.io/address/0x7Bbd6348db83C2fb3633Eebb70367E1AEc258764)  
 WidoSwap.sol: [`0x926D47CBf3ED22872F8678d050e70b198bAE1559`](https://etherscan.io/address/0x926d47cbf3ed22872f8678d050e70b198bae1559)
+WidoWithdraw.sol: [`0xeC551adFd927a0a2FB680e984B452516a7B2cCbc`](https://etherscan.io/address/0xeC551adFd927a0a2FB680e984B452516a7B2cCbc)
 
 ## Install packages
 ```shell
