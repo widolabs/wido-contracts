@@ -2,10 +2,9 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const hardhatConfig = require("../hardhat.config");
 const utils = require("./test-utils");
-const { parseEther } = require("@ethersproject/units");
 
 
-describe("WidoWithdraw", function () {
+describe("WidoCollectFees", function () {
   this.timeout(50000);
   var wido;
   var owner;
@@ -32,14 +31,6 @@ describe("WidoWithdraw", function () {
     await wido.initialize(1);
   });
 
-  // it("Should fail withdraw for non owner", async function () {
-  //   expect(wido.connect(addr1).withdraw()).to.be.revertedWith("Ownable: caller is not the owner");;
-  // });
-
-  // it("Should fail withdrawTo for non owner", async function () {
-  //   expect(wido.connect(addr1).withdrawTo(addr2.address)).to.be.revertedWith("Ownable: caller is not the owner");
-  // });
-
   it("Should fail withdrawToken for non owner", async function () {
     expect(wido.connect(addr1).withdrawToken("0x6b175474e89094c44da98b954eedeac495271d0f", 100)).to.be.revertedWith("Ownable: caller is not the owner");
   });
@@ -47,14 +38,6 @@ describe("WidoWithdraw", function () {
   it("Should fail withdrawTokenTo for non owner", async function () {
     expect(wido.connect(addr1).withdrawTokenTo("0x6b175474e89094c44da98b954eedeac495271d0f", addr2.address, 100)).to.be.revertedWith("Ownable: caller is not the owner");
   });
-
-  // it("Should successfully withdraw to owner", async function () {
-
-  // });
-
-  // it("Should successfully withdrawTo to address", async function () {
-
-  // });
 
   it("Should successfully withdrawToken to owner", async function () {
     const [owner, acc1, acc2] = await ethers.getSigners();
