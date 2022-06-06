@@ -1,6 +1,14 @@
-# Wido Together
+# Wido Contracts
 
-## Deployed Contracts
+## Wido Router
+Wido Router, enabled by [LayerZero](https://layerzero.network/), is a cross-chain deposit and withdrawal protocol. Wido Router allows users to deposit into vaults (or farms, pools, collateralised positions, NFTs and more) on different chains in a single transaction. The user does not need the destination chain native token to pay for gas.
+
+Learn more about it: https://docs.joinwido.com
+
+## Wido Batches
+Batches allow users to save upto 90% in gas on Ethereum L1. Instead of sending a costly transaction on your own, you can batch it with other people and split the gas.
+
+### Deployed Contracts
 Wido.sol: [`0x7Bbd6348db83C2fb3633Eebb70367E1AEc258764`](https://etherscan.io/address/0x7Bbd6348db83C2fb3633Eebb70367E1AEc258764)  
 WidoSwap.sol: [`0x926D47CBf3ED22872F8678d050e70b198bAE1559`](https://etherscan.io/address/0x926d47cbf3ed22872f8678d050e70b198bae1559)
 WidoWithdraw.sol: [`0xeC551adFd927a0a2FB680e984B452516a7B2cCbc`](https://etherscan.io/address/0xeC551adFd927a0a2FB680e984B452516a7B2cCbc)
