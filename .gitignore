@@ -1,8 +1,16 @@
-node_modules
+cache/
+artifacts/
+
+coverage*
+typechain/
+
+node_modules/
 .env
 
-#Hardhat files
-cache
-artifacts
+.yalc
+yalc.lock
 
-.openzeppelin
+contractsInfo.json
+deployments/hardhat
+deployments/localhost
+mochawesome-report/
