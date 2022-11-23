@@ -34,6 +34,7 @@ describe(`WidoManager`, function () {
 
   let widoRouter: WidoRouter;
   let usdcContract: ERC20;
+  let widoManagerAddr: string;
 
   beforeAll(async function () {
     const {WidoRouter, users, USDC} = await setup();
@@ -41,9 +42,10 @@ describe(`WidoManager`, function () {
     usdcContract = USDC;
     alice = users[0];
     bob = users[1];
+    widoManagerAddr = await widoRouter.widoManager();
   });
 
-  it(`should zap other people's funds`, async function () {
+  it(`should not zap other people's funds`, async function () {
     // arrange
     const ETH = ZERO_ADDRESS;
     const WETH = WETH_MAP.mainnet;
@@ -51,7 +53,7 @@ describe(`WidoManager`, function () {
     const stolenAmount = String(100 * 1e6);
 
     await utils.prepForToken(bob.address, USDC, stolenAmount);
-    await utils.approveForToken(await ethers.getSigner(bob.address), USDC, widoRouter.address);
+    await utils.approveForToken(await ethers.getSigner(bob.address), USDC, widoManagerAddr);
     // act
     const steps: IWidoRouter.StepStruct[] = [
       {
@@ -66,7 +68,7 @@ describe(`WidoManager`, function () {
         amountIndex: -1,
       },
     ];
-    await alice.WidoRouter.functions[executeOrderFn](
+    const promise = alice.WidoRouter.functions[executeOrderFn](
       {
         user: alice.address,
         fromToken: ETH,
@@ -84,7 +86,6 @@ describe(`WidoManager`, function () {
       }
     );
     // assert
-    expect(await utils.balanceOf(USDC, alice.address)).to.equal(stolenAmount);
-    expect(await utils.balanceOf(USDC, bob.address)).to.equal("0");
+    await expect(promise).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
   });
 });
