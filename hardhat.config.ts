@@ -130,10 +130,12 @@ const config: HardhatUserConfig = {
   preprocess: {
     eachLine: removeConsoleLog((hre) => hre.network.name !== "hardhat" && hre.network.name !== "localhost"),
   },
-  docgen: {
-    clear: true,
-    runOnCompile: true,
-  },
+  docgen: process.env.SKIP_DOCGEN
+    ? {}
+    : {
+        clear: true,
+        runOnCompile: true,
+      },
 };
 
 export default config;
