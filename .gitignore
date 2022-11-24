@@ -5,7 +5,6 @@ coverage*
 typechain/
 
 node_modules/
-.env
 
 .yalc
 yalc.lock
