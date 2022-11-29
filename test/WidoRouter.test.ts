@@ -55,7 +55,7 @@ describe(`WidoRouter`, function () {
     user1 = users[1];
     deployer = deployers[0];
 
-    await utils.prepForToken(user.address, USDC, "2000");
+    await utils.prepForToken(user.address, USDC, String(2000 * 1e6));
   });
 
   it(`should Zap USDC for USDC_WETH_LP`, async function () {
