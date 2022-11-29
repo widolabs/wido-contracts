@@ -16,6 +16,11 @@ import {removeConsoleLog} from "hardhat-preprocessor";
 import {node_url, accounts, addForkConfiguration} from "./utils/network";
 import "hardhat-log-remover";
 
+import "./tasks/executeTransaction";
+import {ChainName, getChainId} from "wido";
+
+const chainId = process.env.HARDHAT_FORK ? getChainId(process.env.HARDHAT_FORK as ChainName) : undefined;
+
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.7",
@@ -32,6 +37,7 @@ const config: HardhatUserConfig = {
   },
   networks: addForkConfiguration({
     hardhat: {
+      chainId: chainId,
       initialBaseFeePerGas: 0, // to fix : https://github.com/sc-forks/solidity-coverage/issues/652, see https://github.com/sc-forks/solidity-coverage/issues/652#issuecomment-896330136
     },
     localhost: {
@@ -96,9 +102,6 @@ const config: HardhatUserConfig = {
   typechain: {
     outDir: "typechain",
     target: "ethers-v5",
-  },
-  mocha: {
-    timeout: 0,
   },
   external: process.env.HARDHAT_FORK
     ? {
