@@ -16,7 +16,6 @@ import {removeConsoleLog} from "hardhat-preprocessor";
 import {node_url, accounts, addForkConfiguration} from "./utils/network";
 import "hardhat-log-remover";
 
-import "./tasks/executeTransaction";
 import {ChainName, getChainId} from "wido";
 
 const chainId = process.env.HARDHAT_FORK ? getChainId(process.env.HARDHAT_FORK as ChainName) : undefined;
