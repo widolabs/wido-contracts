@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    setupFiles: "test/test-setup.ts",
+    setupFiles: "test/setup/test-setup.ts",
     reporters: ["verbose"],
     maxConcurrency: 5,
     testTimeout: 200e3, // 200s

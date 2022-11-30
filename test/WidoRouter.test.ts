@@ -1,5 +1,5 @@
-import {expect} from "./chai-setup";
-import * as utils from "./test-utils";
+import {expect} from "./setup/chai-setup";
+import * as utils from "./utils/test-utils";
 
 import {ethers, deployments, getUnnamedAccounts, getChainId, getNamedAccounts} from "hardhat";
 import {WidoRouter, WidoZapUniswapV2Pool} from "../typechain";
