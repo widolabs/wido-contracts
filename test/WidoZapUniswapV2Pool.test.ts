@@ -25,7 +25,7 @@ const USDC = USDC_MAP[process.env.HARDHAT_FORK as ChainName];
 const USDC_WETH_LP = USDC_WETH_LP_MAP[process.env.HARDHAT_FORK as ChainName];
 const UNI_ROUTER = UNI_ROUTER_MAP[process.env.HARDHAT_FORK as ChainName];
 
-describe(`UniV2Zap`, function () {
+describe.skip(`UniV2Zap`, function () {
   if (!["mainnet", "polygon"].includes(process.env.HARDHAT_FORK as ChainName)) {
     return;
   }

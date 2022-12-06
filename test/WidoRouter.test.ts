@@ -36,7 +36,7 @@ const executeOrderFn =
 const executeOrderToRecipientFn =
   "executeOrder((address,address,address,uint256,uint256,uint32,uint32),(address,address,address,bytes,int32)[],address,uint256,address)";
 
-describe(`WidoRouter`, function () {
+describe.skip(`WidoRouter`, function () {
   if (!["mainnet", "polygon"].includes(process.env.HARDHAT_FORK as ChainName)) {
     return;
   }

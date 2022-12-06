@@ -1,5 +1,4 @@
 import "dotenv/config";
-import "@tenderly/hardhat-tenderly";
 import "hardhat-contract-sizer";
 import "@openzeppelin/hardhat-upgrades";
 import {HardhatUserConfig} from "hardhat/types";
@@ -18,7 +17,7 @@ import "hardhat-log-remover";
 
 import {ChainName, getChainId} from "wido";
 
-const chainId = process.env.HARDHAT_FORK ? getChainId(process.env.HARDHAT_FORK as ChainName) : undefined;
+const chainId = process.env.HARDHAT_FORK ? getChainId(process.env.HARDHAT_FORK as ChainName) : 1337;
 
 const config: HardhatUserConfig = {
   solidity: {
