@@ -13,6 +13,7 @@ error SlippageTooHigh(uint256 expectedAmount, uint256 actualAmount);
 
 /// @title Wido Router
 /// @notice Zap in or out of any ERC20 token, liquid or illiquid, in a single transaction.
+/// @notice DO NOT APPROVE THIS CONTRACT FOR SPENDING YOUR TOKENS.
 /// @author Wido
 contract WidoRouter is IWidoRouter, Ownable {
     using SafeTransferLib for address;
