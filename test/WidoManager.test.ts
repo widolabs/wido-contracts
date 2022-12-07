@@ -23,7 +23,7 @@ const setup = deployments.createFixture(async () => {
 });
 
 const executeOrderFn =
-  "executeOrder((address,address,address,uint256,uint256,uint32,uint32),(address,address,address,bytes,int32)[],uint256,address)";
+  "executeOrder(((address,uint256)[],(address,uint256)[],address,uint32,uint32),(address,address,bytes,int32)[],uint256,address)";
 
 describe(`WidoManager`, function () {
   if (!["mainnet"].includes(process.env.HARDHAT_FORK as ChainName)) {
@@ -47,18 +47,18 @@ describe(`WidoManager`, function () {
 
   it(`should not zap other people's funds`, async function () {
     // arrange
-    const ETH = ZERO_ADDRESS;
     const WETH = WETH_MAP.mainnet;
     const USDC = USDC_MAP.mainnet;
     const stolenAmount = String(100 * 1e6);
 
+    await utils.prepForToken(alice.address, WETH, "1");
+    await utils.approveForToken(await ethers.getSigner(alice.address), WETH, widoManagerAddr);
     await utils.prepForToken(bob.address, USDC, stolenAmount);
     await utils.approveForToken(await ethers.getSigner(bob.address), USDC, widoManagerAddr);
     // act
     const steps: IWidoRouter.StepStruct[] = [
       {
         fromToken: WETH,
-        toToken: USDC,
         targetAddress: usdcContract.address,
         data: usdcContract.interface.encodeFunctionData("transferFrom", [
           bob.address,
@@ -71,19 +71,24 @@ describe(`WidoManager`, function () {
     const promise = alice.WidoRouter.functions[executeOrderFn](
       {
         user: alice.address,
-        fromToken: ETH,
-        toToken: USDC,
-        fromTokenAmount: "1",
-        minToTokenAmount: stolenAmount,
+        inputs: [
+          {
+            tokenAddress: WETH,
+            amount: "1",
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: USDC,
+            minOutputAmount: stolenAmount,
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
       steps,
       30,
-      ZERO_ADDRESS,
-      {
-        value: 1,
-      }
+      ZERO_ADDRESS
     );
     // assert
     await expect(promise).to.be.revertedWith("ERC20: transfer amount exceeds allowance");

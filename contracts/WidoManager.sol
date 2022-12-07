@@ -11,16 +11,16 @@ contract WidoManager is IWidoManager, Ownable {
 
     /// @notice Transfers tokens or native tokens from the user
     /// @param user The address of the order user
-    /// @param token The address of the token to transfer (address(0) for native token)
-    /// @param amount The amount if tokens to transfer from the user
-    /// @dev amount must == msg.value when token == address(0)
-    /// @return uint256 The amount of tokens or native tokens transferred from the user to this contract
-    function pullTokens(
-        address user,
-        address token,
-        uint256 amount
-    ) external override onlyOwner returns (uint256) {
-        ERC20(token).safeTransferFrom(user, owner(), amount);
-        return amount;
+    /// @param inputs Array of input objects, see OrderInput and Order
+    function pullTokens(address user, IWidoRouter.OrderInput[] calldata inputs) external override onlyOwner {
+        for (uint256 i = 0; i < inputs.length; i++) {
+            IWidoRouter.OrderInput calldata input = inputs[i];
+
+            if (input.tokenAddress == address(0)) {
+                continue;
+            }
+
+            ERC20(input.tokenAddress).safeTransferFrom(user, owner(), input.amount);
+        }
     }
 }

@@ -66,12 +66,20 @@ const domainType = [
   {name: "verifyingContract", type: "address"},
 ];
 
+const orderInputType = [
+  {name: "tokenAddress", type: "address"},
+  {name: "amount", type: "uint256"},
+];
+
+const orderOutputType = [
+  {name: "tokenAddress", type: "address"},
+  {name: "minOutputAmount", type: "uint256"},
+];
+
 const orderType = [
+  {name: "inputs", type: "OrderInput[]"},
+  {name: "outputs", type: "OrderOutput[]"},
   {name: "user", type: "address"},
-  {name: "fromToken", type: "address"},
-  {name: "toToken", type: "address"},
-  {name: "fromTokenAmount", type: "uint256"},
-  {name: "minToTokenAmount", type: "uint256"},
   {name: "nonce", type: "uint32"},
   {name: "expiration", type: "uint32"},
 ];
@@ -104,6 +112,8 @@ export async function buildAndSignOrder(
   const data = JSON.stringify({
     types: {
       EIP712Domain: domainType,
+      OrderInput: orderInputType,
+      OrderOutput: orderOutputType,
       Order: orderType,
     },
     domain: wrDomainData,
@@ -118,12 +128,13 @@ export async function buildAndSignOrder(
     wrDomainData,
     {
       Order: orderType,
+      OrderInput: orderInputType,
+      OrderOutput: orderOutputType,
     },
     request
   );
 
-  // @ts-expect-error send exists
-  const y = await signer.provider?.send(method, params);
+  // const y = await signer.provider?.send(method, params);
 
   const signature = _parseSignature(x);
   return {

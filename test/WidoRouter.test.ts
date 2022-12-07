@@ -9,6 +9,7 @@ import {ChainName} from "wido";
 import {IWidoRouter} from "../typechain/contracts/WidoRouter";
 import {BigNumber} from "ethers";
 import {beforeAll, describe, it} from "vitest";
+import WethAbi from "../abi/weth.json";
 
 const setup = deployments.createFixture(async () => {
   await deployments.fixture(["WidoRouter", "WidoZapUniswapV2Pool"]);
@@ -32,9 +33,10 @@ const USDC_WETH_LP = USDC_WETH_LP_MAP[process.env.HARDHAT_FORK as ChainName];
 const UNI_ROUTER = UNI_ROUTER_MAP[process.env.HARDHAT_FORK as ChainName];
 
 const executeOrderFn =
-  "executeOrder((address,address,address,uint256,uint256,uint32,uint32),(address,address,address,bytes,int32)[],uint256,address)";
+  "executeOrder(((address,uint256)[],(address,uint256)[],address,uint32,uint32),(address,address,bytes,int32)[],uint256,address)";
+
 const executeOrderToRecipientFn =
-  "executeOrder((address,address,address,uint256,uint256,uint32,uint32),(address,address,address,bytes,int32)[],address,uint256,address)";
+  "executeOrder(((address,uint256)[],(address,uint256)[],address,uint32,uint32),(address,address,bytes,int32)[],address,uint256,address)";
 
 describe(`WidoRouter`, function () {
   if (!["mainnet", "polygon"].includes(process.env.HARDHAT_FORK as ChainName)) {
@@ -80,16 +82,24 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await user.WidoRouter.functions[executeOrderFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -103,6 +113,62 @@ describe(`WidoRouter`, function () {
 
     expect(initFromTokenBal.sub(finalFromTokenBal)).to.equal(amount);
     expect(finalToTokenBal.sub(initToTokenBal).toNumber()).to.greaterThanOrEqual(1);
+  });
+
+  it(`should be able to use native tokens in _executeSteps`, async function () {
+    const fromToken = WETH;
+    const toToken = WETH;
+    const amount = BigNumber.from(10).pow(18);
+
+    const signer = await ethers.getSigner(user.address);
+
+    const dustOnRouter = await ethers.provider.getBalance(widoRouter.address);
+
+    await utils.prepForToken(user.address, fromToken, amount.toString());
+    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    const initFromTokenBal = await utils.balanceOf(fromToken, user.address);
+
+    const wethContract = new ethers.Contract(WETH, WethAbi, signer);
+    const swapRoute: IWidoRouter.StepStruct[] = [
+      {
+        fromToken,
+        targetAddress: WETH,
+        data: wethContract.interface.encodeFunctionData("withdraw", [amount.div(2)]),
+        amountIndex: -1,
+      },
+      {
+        fromToken: ZERO_ADDRESS,
+        targetAddress: WETH,
+        data: wethContract.interface.encodeFunctionData("deposit"),
+        amountIndex: -1,
+      },
+    ];
+
+    await user.WidoRouter.functions[executeOrderFn](
+      {
+        user: user.address,
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
+        nonce: "0",
+        expiration: "0",
+      },
+      swapRoute,
+      30,
+      ZERO_ADDRESS
+    );
+
+    const finalFromTokenBal = await utils.balanceOf(fromToken, user.address);
+    expect(initFromTokenBal.sub(finalFromTokenBal)).to.equal(amount.mul(30).div(10000).sub(dustOnRouter));
   });
 
   it(`should not Zap USDC for USDC_WETH_LP for other user`, async function () {
@@ -123,17 +189,25 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await expect(
       user1.WidoRouter.functions[executeOrderFn](
         {
           user: user.address,
-          fromToken: fromToken,
-          toToken: toToken,
-          fromTokenAmount: amount,
-          minToTokenAmount: "1",
+          inputs: [
+            {
+              tokenAddress: fromToken,
+              amount,
+            },
+          ],
+          outputs: [
+            {
+              tokenAddress: toToken,
+              minOutputAmount: "1",
+            },
+          ],
           nonce: "0",
           expiration: "0",
         },
@@ -166,16 +240,24 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await user.WidoRouter.functions[executeOrderToRecipientFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -214,17 +296,25 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await expect(
       user1.WidoRouter.functions[executeOrderToRecipientFn](
         {
           user: user.address,
-          fromToken: fromToken,
-          toToken: toToken,
-          fromTokenAmount: amount,
-          minToTokenAmount: "1",
+          inputs: [
+            {
+              tokenAddress: fromToken,
+              amount,
+            },
+          ],
+          outputs: [
+            {
+              tokenAddress: toToken,
+              minOutputAmount: "1",
+            },
+          ],
           nonce: "0",
           expiration: "0",
         },
@@ -256,15 +346,23 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
-    const order = {
+    const order: IWidoRouter.OrderStruct = {
       user: user.address,
-      fromToken: fromToken,
-      toToken: toToken,
-      fromTokenAmount: amount,
-      minToTokenAmount: "1",
+      inputs: [
+        {
+          tokenAddress: fromToken,
+          amount,
+        },
+      ],
+      outputs: [
+        {
+          tokenAddress: toToken,
+          minOutputAmount: "1",
+        },
+      ],
       nonce: "0",
       expiration: "0",
     };
@@ -307,15 +405,23 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
-    const order = {
+    const order: IWidoRouter.OrderStruct = {
       user: user.address,
-      fromToken: fromToken,
-      toToken: toToken,
-      fromTokenAmount: amount,
-      minToTokenAmount: "1",
+      inputs: [
+        {
+          tokenAddress: fromToken,
+          amount,
+        },
+      ],
+      outputs: [
+        {
+          tokenAddress: toToken,
+          minOutputAmount: "1",
+        },
+      ],
       nonce: "0",
       expiration: "0",
     };
@@ -353,15 +459,23 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
-    const order = {
+    const order: IWidoRouter.OrderStruct = {
       user: user.address,
-      fromToken: fromToken,
-      toToken: toToken,
-      fromTokenAmount: amount,
-      minToTokenAmount: "1",
+      inputs: [
+        {
+          tokenAddress: fromToken,
+          amount,
+        },
+      ],
+      outputs: [
+        {
+          tokenAddress: toToken,
+          minOutputAmount: "1",
+        },
+      ],
       nonce: "0",
       expiration: "0",
     };
@@ -399,15 +513,23 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
-    const order = {
+    const order: IWidoRouter.OrderStruct = {
       user: user.address,
-      fromToken: fromToken,
-      toToken: toToken,
-      fromTokenAmount: "0",
-      minToTokenAmount: "1",
+      inputs: [
+        {
+          tokenAddress: fromToken,
+          amount: 0,
+        },
+      ],
+      outputs: [
+        {
+          tokenAddress: toToken,
+          minOutputAmount: "1",
+        },
+      ],
       nonce: "1",
       expiration: "0",
     };
@@ -445,17 +567,25 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await expect(
       user.WidoRouter.functions[executeOrderFn](
         {
           user: user.address,
-          fromToken: fromToken,
-          toToken: toToken,
-          fromTokenAmount: amount,
-          minToTokenAmount: "100000000000000000",
+          inputs: [
+            {
+              tokenAddress: fromToken,
+              amount,
+            },
+          ],
+          outputs: [
+            {
+              tokenAddress: toToken,
+              minOutputAmount: "100000000000000000",
+            },
+          ],
           nonce: "0",
           expiration: "0",
         },
@@ -481,17 +611,39 @@ describe(`WidoRouter`, function () {
       1,
     ]);
 
+    const signer = await ethers.getSigner(user.address);
+    const wethContract = new ethers.Contract(WETH, WethAbi, signer);
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken: WETH, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {
+        fromToken: ZERO_ADDRESS,
+        targetAddress: WETH,
+        data: wethContract.interface.encodeFunctionData("deposit"),
+        amountIndex: -1,
+      },
+      {fromToken: WETH, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      // {
+      //   fromToken,
+      //   targetAddress: WETH,
+      //   data: wethContract.interface.encodeFunctionData("withdraw", [amount.div(2)]),
+      //   amountIndex: -1,
+      // },
     ];
 
     await user.WidoRouter.functions[executeOrderFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -523,18 +675,34 @@ describe(`WidoRouter`, function () {
       1,
     ]);
 
+    const signer = await ethers.getSigner(user.address);
+    const wethContract = new ethers.Contract(WETH, WethAbi, signer);
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken: WETH, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {
+        fromToken: ZERO_ADDRESS,
+        targetAddress: WETH,
+        data: wethContract.interface.encodeFunctionData("deposit"),
+        amountIndex: -1,
+      },
+      {fromToken: WETH, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await expect(
       user.WidoRouter.functions[executeOrderFn](
         {
           user: user.address,
-          fromToken: fromToken,
-          toToken: toToken,
-          fromTokenAmount: amount,
-          minToTokenAmount: "1",
+          inputs: [
+            {
+              tokenAddress: fromToken,
+              amount,
+            },
+          ],
+          outputs: [
+            {
+              tokenAddress: toToken,
+              minOutputAmount: "1",
+            },
+          ],
           nonce: "0",
           expiration: "0",
         },
@@ -545,7 +713,7 @@ describe(`WidoRouter`, function () {
           value: BigNumber.from(amount).sub(2),
         }
       )
-    ).to.be.revertedWith("Invalid amount or msg.value");
+    ).to.be.revertedWith("Balance lower than order amount");
   });
 
   it(`should not Zap ETH for USDC_WETH_LP -- incorrect route`, async function () {
@@ -562,17 +730,25 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken: USDC, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken: USDC, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await expect(
       user.WidoRouter.functions[executeOrderFn](
         {
           user: user.address,
-          fromToken: fromToken,
-          toToken: toToken,
-          fromTokenAmount: amount,
-          minToTokenAmount: "1",
+          inputs: [
+            {
+              tokenAddress: fromToken,
+              amount,
+            },
+          ],
+          outputs: [
+            {
+              tokenAddress: toToken,
+              minOutputAmount: "1",
+            },
+          ],
           nonce: "0",
           expiration: "0",
         },
@@ -602,20 +778,35 @@ describe(`WidoRouter`, function () {
       1,
     ]);
 
+    const signer = await ethers.getSigner(user.address);
+    const wethContract = new ethers.Contract(WETH, WethAbi, signer);
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken: WETH, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 68},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 68},
+      {
+        fromToken: WETH,
+        targetAddress: WETH,
+        data: wethContract.interface.encodeFunctionData("withdraw", [1]),
+        amountIndex: -1,
+      },
     ];
 
-    const signer = await ethers.getSigner(user.address);
     await utils.approveForToken(signer, fromToken, widoManagerAddr);
 
     await user.WidoRouter.functions[executeOrderFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -647,17 +838,33 @@ describe(`WidoRouter`, function () {
       1,
     ]);
 
+    const signer = await ethers.getSigner(user.address);
+    const wethContract = new ethers.Contract(WETH, WethAbi, signer);
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken: WETH, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {
+        fromToken: ZERO_ADDRESS,
+        targetAddress: WETH,
+        data: wethContract.interface.encodeFunctionData("deposit"),
+        amountIndex: -1,
+      },
+      {fromToken: WETH, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await user.WidoRouter.functions[executeOrderToRecipientFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -708,16 +915,24 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await user.WidoRouter.functions[executeOrderFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -751,16 +966,24 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await user.WidoRouter.functions[executeOrderFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -795,16 +1018,24 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken: USDC, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 68},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 68},
     ];
 
     await user.WidoRouter.functions[executeOrderFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -838,16 +1069,24 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
     await user.WidoRouter.functions[executeOrderFn](
       {
         user: user.address,
-        fromToken: fromToken,
-        toToken: toToken,
-        fromTokenAmount: amount,
-        minToTokenAmount: "1",
+        inputs: [
+          {
+            tokenAddress: fromToken,
+            amount,
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: toToken,
+            minOutputAmount: "1",
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
@@ -878,21 +1117,52 @@ describe(`WidoRouter`, function () {
     ]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken, toToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data, amountIndex: 100},
     ];
 
-    const order = {
+    const order: IWidoRouter.OrderStruct = {
       user: user.address,
-      fromToken: fromToken,
-      toToken: toToken,
-      fromTokenAmount: amount,
-      minToTokenAmount: "1",
+      inputs: [
+        {
+          tokenAddress: fromToken,
+          amount,
+        },
+      ],
+      outputs: [
+        {
+          tokenAddress: toToken,
+          minOutputAmount: "1",
+        },
+      ],
       nonce: "0",
       expiration: "0",
     };
 
     await expect(user.WidoRouter.functions[executeOrderFn](order, swapRoute, 30, user1.address))
       .to.emit(user.WidoRouter, "FulfilledOrder")
-      .withArgs([user.address, fromToken, toToken, amount, "1", 0, 0], order.user, user.address, 30, user1.address);
+      .withArgs(
+        [
+          // TODO
+          //  [
+          //    fromToken,
+          //    BigNumber.from(amount),
+          //    false,
+          //    BigNumber.from(0)
+          //  ],
+          //  [
+          //    toToken,
+          //    BigNumber.from("1"),
+          //    false,
+          //    BigNumber.from(0)
+          //  ]
+          // user.address,
+          // 0,
+          // 0
+        ],
+        order.user,
+        user.address,
+        30,
+        user1.address
+      );
   });
 });

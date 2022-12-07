@@ -6,7 +6,6 @@ import "solmate/src/utils/SafeTransferLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./interfaces/IWidoRouter.sol";
-import "./interfaces/IWETH.sol";
 import "./WidoManager.sol";
 
 error SlippageTooHigh(uint256 expectedAmount, uint256 actualAmount);
@@ -27,9 +26,15 @@ contract WidoRouter is IWidoRouter, Ownable {
     bytes32 private constant ORDER_TYPEHASH =
         keccak256(
             abi.encodePacked(
-                "Order(address user,address fromToken,address toToken,uint256 fromTokenAmount,uint256 minToTokenAmount,uint32 nonce,uint32 expiration)"
+                "Order(OrderInput[] inputs,OrderOutput[] outputs,address user,uint32 nonce,uint32 expiration)OrderInput(address tokenAddress,uint256 amount)OrderOutput(address tokenAddress,uint256 minOutputAmount)"
             )
         );
+
+    bytes32 private constant ORDER_INPUT_TYPEHASH =
+        keccak256(abi.encodePacked("OrderInput(address tokenAddress,uint256 amount)"));
+
+    bytes32 private constant ORDER_OUTPUT_TYPEHASH =
+        keccak256(abi.encodePacked("OrderOutput(address tokenAddress,uint256 minOutputAmount)"));
 
     bytes32 public immutable DOMAIN_SEPARATOR;
 
@@ -84,11 +89,7 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @param token The ERC20 token to approve
     /// @param spender The address of the spender
     /// @param amount The minimum allowance to grant to the spender
-    function _approveToken(
-        address token,
-        address spender,
-        uint256 amount
-    ) internal {
+    function _approveToken(address token, address spender, uint256 amount) internal {
         ERC20 _token = ERC20(token);
         if (_token.allowance(address(this), spender) < amount) {
             _token.safeApprove(spender, type(uint256).max);
@@ -100,14 +101,21 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @dev Updates the amount in the byte data with the current balance as to not leave any dust
     /// @dev Expects step data to be properly chained for the token transformation tokenA -> tokenB -> tokenC
     function _executeSteps(Step[] calldata route) private {
-        for (uint256 i = 0; i < route.length; i++) {
+        for (uint256 i = 0; i < route.length; ) {
             Step calldata step = route[i];
 
             require(step.targetAddress != address(widoManager), "Wido: forbidden call to WidoManager");
 
-            uint256 balance = ERC20(step.fromToken).balanceOf(address(this));
-            require(balance > 0, "Not enough balance for the step");
-            _approveToken(step.fromToken, step.targetAddress, balance);
+            uint256 balance;
+            uint256 value;
+            if (step.fromToken == address(0)) {
+                value = address(this).balance;
+            } else {
+                value = 0;
+                balance = ERC20(step.fromToken).balanceOf(address(this));
+                require(balance > 0, "Not enough balance for the step");
+                _approveToken(step.fromToken, step.targetAddress, balance);
+            }
 
             bytes memory editedSwapData;
             if (step.amountIndex >= 0) {
@@ -117,7 +125,7 @@ contract WidoRouter is IWidoRouter, Ownable {
                 editedSwapData = step.data;
             }
 
-            (bool success, bytes memory result) = step.targetAddress.call(editedSwapData);
+            (bool success, bytes memory result) = step.targetAddress.call{value: value}(editedSwapData);
             if (!success) {
                 // Next 5 lines from https://ethereum.stackexchange.com/a/83577
                 if (result.length < 68) revert();
@@ -126,7 +134,55 @@ contract WidoRouter is IWidoRouter, Ownable {
                 }
                 revert(abi.decode(result, (string)));
             }
+
+            unchecked {
+                i++;
+            }
         }
+    }
+
+    function hash(OrderInput memory orderInput) internal pure returns (bytes32) {
+        return keccak256(abi.encode(ORDER_INPUT_TYPEHASH, orderInput));
+    }
+
+    function hash(OrderOutput memory orderOutput) internal pure returns (bytes32) {
+        return keccak256(abi.encode(ORDER_OUTPUT_TYPEHASH, orderOutput));
+    }
+
+    function hash(OrderInput[] memory orderInput) internal pure returns (bytes32) {
+        bytes32[] memory result = new bytes32[](orderInput.length);
+        for (uint256 i = 0; i < orderInput.length; ) {
+            result[i] = keccak256(abi.encode(ORDER_INPUT_TYPEHASH, orderInput[i]));
+            unchecked {
+                i++;
+            }
+        }
+        return keccak256(abi.encodePacked(result));
+    }
+
+    function hash(OrderOutput[] memory orderOutput) internal pure returns (bytes32) {
+        bytes32[] memory result = new bytes32[](orderOutput.length);
+        for (uint256 i = 0; i < orderOutput.length; ) {
+            result[i] = keccak256(abi.encode(ORDER_OUTPUT_TYPEHASH, orderOutput[i]));
+            unchecked {
+                i++;
+            }
+        }
+        return keccak256(abi.encodePacked(result));
+    }
+
+    function hash(Order memory order) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    ORDER_TYPEHASH,
+                    hash(order.inputs),
+                    hash(order.outputs),
+                    order.user,
+                    order.nonce,
+                    order.expiration
+                )
+            );
     }
 
     /// @notice Verifies if the order is valid
@@ -135,14 +191,9 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @param r r of the signature
     /// @param s s of the signature
     /// @return bool True if the order is valid
-    function verifyOrder(
-        Order calldata order,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public view override returns (bool) {
+    function verifyOrder(Order calldata order, uint8 v, bytes32 r, bytes32 s) public view override returns (bool) {
         address recoveredAddress = ECDSA.recover(
-            keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, keccak256(abi.encode(ORDER_TYPEHASH, order)))),
+            keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hash(order))),
             v,
             r,
             s
@@ -150,7 +201,13 @@ contract WidoRouter is IWidoRouter, Ownable {
         require(recoveredAddress != address(0) && order.user == recoveredAddress, "Invalid signature");
         require(order.nonce == nonces[order.user], "Invalid nonce");
         require(order.expiration == 0 || block.timestamp <= order.expiration, "Expired request");
-        require(order.fromTokenAmount > 0, "Amount should be greater than 0");
+        for (uint256 i = 0; i < order.inputs.length; ) {
+            IWidoRouter.OrderInput calldata input = order.inputs[i];
+            require(input.amount > 0, "Amount should be greater than 0");
+            unchecked {
+                i++;
+            }
+        }
         return true;
     }
 
@@ -159,44 +216,50 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @param route Route to execute for the token swap
     /// @param recipient The address of the final token receiver
     /// @param feeBps Fee in basis points (bps)
-    /// @return toTokenBalance The final token balance sent to the recipient
     /// @dev Expects the steps in the route to transform order.fromToken to order.toToken
     /// @dev Expects at least order.minToTokenAmount to be transferred to the recipient
-    function _executeOrder(
-        Order calldata order,
-        Step[] calldata route,
-        address recipient,
-        uint256 feeBps
-    ) private returns (uint256 toTokenBalance) {
-        if (order.fromToken == address(0)) {
-            require(msg.value > 0 && msg.value == order.fromTokenAmount, "Invalid amount or msg.value");
-        } else {
-            widoManager.pullTokens(order.user, order.fromToken, order.fromTokenAmount);
-        }
+    function _executeOrder(Order calldata order, Step[] calldata route, address recipient, uint256 feeBps) private {
+        widoManager.pullTokens(order.user, order.inputs);
 
-        if (order.fromToken == address(0)) {
-            IWETH(wrappedNativeToken).deposit{value: order.fromTokenAmount}();
-            _collectFees(wrappedNativeToken, order.fromTokenAmount, feeBps);
-        } else {
-            uint256 fromTokenBalance = ERC20(order.fromToken).balanceOf(address(this));
-            require(fromTokenBalance >= order.fromTokenAmount, "Balance lower than order amount");
-            _collectFees(order.fromToken, fromTokenBalance, feeBps);
+        for (uint256 i = 0; i < order.inputs.length; ) {
+            IWidoRouter.OrderInput calldata input = order.inputs[i];
+
+            uint256 balance;
+            if (input.tokenAddress == address(0)) {
+                balance = address(this).balance;
+            } else {
+                balance = ERC20(input.tokenAddress).balanceOf(address(this));
+            }
+            require(balance >= input.amount, "Balance lower than order amount");
+            _collectFees(input.tokenAddress, balance, feeBps);
+
+            unchecked {
+                i++;
+            }
         }
 
         _executeSteps(route);
 
-        if (order.toToken == address(0)) {
-            toTokenBalance = ERC20(wrappedNativeToken).balanceOf(address(this));
-            IWETH(wrappedNativeToken).withdraw(toTokenBalance);
-        } else {
-            toTokenBalance = ERC20(order.toToken).balanceOf(address(this));
-        }
-        if (toTokenBalance < order.minToTokenAmount) revert SlippageTooHigh(order.minToTokenAmount, toTokenBalance);
+        for (uint256 i = 0; i < order.outputs.length; ) {
+            IWidoRouter.OrderOutput calldata output = order.outputs[i];
 
-        if (order.toToken == address(0)) {
-            recipient.safeTransferETH(toTokenBalance);
-        } else {
-            ERC20(order.toToken).safeTransfer(recipient, toTokenBalance);
+            if (output.tokenAddress == address(0)) {
+                uint256 balance = address(this).balance;
+                if (balance < output.minOutputAmount) {
+                    revert SlippageTooHigh(output.minOutputAmount, balance);
+                }
+                recipient.safeTransferETH(balance);
+            } else {
+                uint256 balance = ERC20(output.tokenAddress).balanceOf(address(this));
+                if (balance < output.minOutputAmount) {
+                    revert SlippageTooHigh(output.minOutputAmount, balance);
+                }
+                ERC20(output.tokenAddress).safeTransfer(recipient, balance);
+            }
+
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -207,14 +270,14 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @return uint256 The amount of token or native tokens for the order less the fee
     /// @dev Sends the fee to the bank to not maintain any balance in the contract
     /// @dev Does not charge fee if the input or final token is in the fee whitelist
-    function _collectFees(
-        address fromToken,
-        uint256 amount,
-        uint256 feeBps
-    ) private returns (uint256) {
+    function _collectFees(address fromToken, uint256 amount, uint256 feeBps) private returns (uint256) {
         require(feeBps <= 100, "Fee out of range");
         uint256 fee = (amount * feeBps) / 10000;
-        ERC20(fromToken).safeTransfer(bank, fee);
+        if (fromToken == address(0)) {
+            bank.safeTransferETH(fee);
+        } else {
+            ERC20(fromToken).safeTransfer(bank, fee);
+        }
         return amount - fee;
     }
 
@@ -223,15 +286,14 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @param route Route describes the details of the token transformation
     /// @param feeBps Fee in basis points (bps)
     /// @param partner Partner address
-    /// @return toTokenBalance Amount of the to token that resulted from executing the order
     function executeOrder(
         Order calldata order,
         Step[] calldata route,
         uint256 feeBps,
         address partner
-    ) external payable override returns (uint256 toTokenBalance) {
+    ) external payable override {
         require(msg.sender == order.user, "Invalid order user");
-        toTokenBalance = _executeOrder(order, route, order.user, feeBps);
+        _executeOrder(order, route, order.user, feeBps);
         emit FulfilledOrder(order, msg.sender, order.user, feeBps, partner);
     }
 
@@ -241,16 +303,15 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @param recipient Destination address where the final tokens are sent
     /// @param feeBps Fee in basis points (bps)
     /// @param partner Partner address
-    /// @return toTokenBalance Amount of the to token that resulted from executing the order
     function executeOrder(
         Order calldata order,
         Step[] calldata route,
         address recipient,
         uint256 feeBps,
         address partner
-    ) external payable override returns (uint256 toTokenBalance) {
+    ) external payable override {
         require(msg.sender == order.user, "Invalid order user");
-        toTokenBalance = _executeOrder(order, route, recipient, feeBps);
+        _executeOrder(order, route, recipient, feeBps);
         emit FulfilledOrder(order, msg.sender, recipient, feeBps, partner);
     }
 
@@ -262,7 +323,6 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @param s s of the signation
     /// @param feeBps Fee in basis points (bps)
     /// @param partner Partner address
-    /// @return toTokenBalance Amount of the to token that resulted from executing the order
     function executeOrderWithSignature(
         Order calldata order,
         Step[] calldata route,
@@ -271,10 +331,10 @@ contract WidoRouter is IWidoRouter, Ownable {
         bytes32 s,
         uint256 feeBps,
         address partner
-    ) external override returns (uint256 toTokenBalance) {
+    ) external override {
         require(verifyOrder(order, v, r, s), "Invalid order");
         nonces[order.user]++;
-        toTokenBalance = _executeOrder(order, route, order.user, feeBps);
+        _executeOrder(order, route, order.user, feeBps);
         emit FulfilledOrder(order, msg.sender, order.user, feeBps, partner);
     }
 
