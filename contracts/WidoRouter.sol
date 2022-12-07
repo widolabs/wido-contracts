@@ -5,7 +5,6 @@ pragma solidity 0.8.7;
 import "solmate/src/utils/SafeTransferLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol";
 import "./interfaces/IWidoRouter.sol";
 import "./interfaces/IWETH.sol";
 import "./WidoManager.sol";
@@ -18,7 +17,6 @@ error SlippageTooHigh(uint256 expectedAmount, uint256 actualAmount);
 contract WidoRouter is IWidoRouter, Ownable {
     using SafeTransferLib for address;
     using SafeTransferLib for ERC20;
-    using LowGasSafeMath for uint256;
 
     bytes32 private constant EIP712_DOMAIN_TYPEHASH =
         keccak256(
@@ -214,7 +212,7 @@ contract WidoRouter is IWidoRouter, Ownable {
         uint256 feeBps
     ) private returns (uint256) {
         require(feeBps <= 100, "Fee out of range");
-        uint256 fee = amount.mul(feeBps) / 10000;
+        uint256 fee = (amount * feeBps) / 10000;
         ERC20(fromToken).safeTransfer(bank, fee);
         return amount - fee;
     }
