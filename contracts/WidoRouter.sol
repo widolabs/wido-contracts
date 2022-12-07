@@ -5,19 +5,19 @@ pragma solidity 0.8.7;
 import "solmate/src/utils/SafeTransferLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol";
 import "./interfaces/IWidoRouter.sol";
 import "./interfaces/IWETH.sol";
+import "./WidoManager.sol";
 
 error SlippageTooHigh(uint256 expectedAmount, uint256 actualAmount);
 
 /// @title Wido Router
 /// @notice Zap in or out of any ERC20 token, liquid or illiquid, in a single transaction.
+/// @notice DO NOT APPROVE THIS CONTRACT FOR SPENDING YOUR TOKENS.
 /// @author Wido
 contract WidoRouter is IWidoRouter, Ownable {
     using SafeTransferLib for address;
     using SafeTransferLib for ERC20;
-    using LowGasSafeMath for uint256;
 
     bytes32 private constant EIP712_DOMAIN_TYPEHASH =
         keccak256(
@@ -41,6 +41,8 @@ contract WidoRouter is IWidoRouter, Ownable {
 
     // Address of fee bank
     address public bank;
+
+    WidoManager public immutable widoManager;
 
     /// @notice Event emitted when the order is fulfilled
     /// @param order The order that was fulfilled
@@ -68,6 +70,7 @@ contract WidoRouter is IWidoRouter, Ownable {
 
         wrappedNativeToken = _wrappedNativeToken;
         bank = _bank;
+        widoManager = new WidoManager();
     }
 
     /// @notice Sets the bank address
@@ -75,25 +78,6 @@ contract WidoRouter is IWidoRouter, Ownable {
     function setBank(address _bank) external onlyOwner {
         require(_bank != address(0), "Bank address cannot be zero address");
         bank = _bank;
-    }
-
-    /// @notice Transfers tokens or native tokens from the user
-    /// @param user The address of the order user
-    /// @param token The address of the token to transfer (address(0) for native token)
-    /// @param amount The amount if tokens to transfer from the user
-    /// @dev amount must == msg.value when token == address(0)
-    /// @return uint256 The amount of tokens or native tokens transferred from the user to this contract
-    function _pullTokens(
-        address user,
-        address token,
-        uint256 amount
-    ) internal returns (uint256) {
-        if (token == address(0)) {
-            require(msg.value > 0 && msg.value == amount, "Invalid amount or msg.value");
-            return msg.value;
-        }
-        ERC20(token).safeTransferFrom(user, address(this), amount);
-        return amount;
     }
 
     /// @notice Approve a token spending
@@ -118,6 +102,8 @@ contract WidoRouter is IWidoRouter, Ownable {
     function _executeSteps(Step[] calldata route) private {
         for (uint256 i = 0; i < route.length; i++) {
             Step calldata step = route[i];
+
+            require(step.targetAddress != address(widoManager), "Wido: forbidden call to WidoManager");
 
             uint256 balance = ERC20(step.fromToken).balanceOf(address(this));
             require(balance > 0, "Not enough balance for the step");
@@ -182,7 +168,11 @@ contract WidoRouter is IWidoRouter, Ownable {
         address recipient,
         uint256 feeBps
     ) private returns (uint256 toTokenBalance) {
-        _pullTokens(order.user, order.fromToken, order.fromTokenAmount);
+        if (order.fromToken == address(0)) {
+            require(msg.value > 0 && msg.value == order.fromTokenAmount, "Invalid amount or msg.value");
+        } else {
+            widoManager.pullTokens(order.user, order.fromToken, order.fromTokenAmount);
+        }
 
         if (order.fromToken == address(0)) {
             IWETH(wrappedNativeToken).deposit{value: order.fromTokenAmount}();
@@ -223,7 +213,7 @@ contract WidoRouter is IWidoRouter, Ownable {
         uint256 feeBps
     ) private returns (uint256) {
         require(feeBps <= 100, "Fee out of range");
-        uint256 fee = amount.mul(feeBps) / 10000;
+        uint256 fee = (amount * feeBps) / 10000;
         ERC20(fromToken).safeTransfer(bank, fee);
         return amount - fee;
     }
