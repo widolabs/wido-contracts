@@ -5,6 +5,7 @@ pragma solidity 0.8.7;
 import "solmate/src/utils/SafeTransferLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/IWidoRouter.sol";
 import "./WidoManager.sol";
 
@@ -14,7 +15,7 @@ error SlippageTooHigh(uint256 expectedAmount, uint256 actualAmount);
 /// @notice Zap in or out of any ERC20 token, liquid or illiquid, in a single transaction.
 /// @notice DO NOT APPROVE THIS CONTRACT FOR SPENDING YOUR TOKENS.
 /// @author Wido
-contract WidoRouter is IWidoRouter, Ownable {
+contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
     using SafeTransferLib for address;
     using SafeTransferLib for ERC20;
 
@@ -280,7 +281,7 @@ contract WidoRouter is IWidoRouter, Ownable {
         Step[] calldata route,
         uint256 feeBps,
         address partner
-    ) external payable override {
+    ) external payable override nonReentrant {
         require(msg.sender == order.user, "Invalid order user");
         _executeOrder(order, route, order.user, feeBps);
         emit FulfilledOrder(order, msg.sender, order.user, feeBps, partner);
@@ -298,7 +299,7 @@ contract WidoRouter is IWidoRouter, Ownable {
         address recipient,
         uint256 feeBps,
         address partner
-    ) external payable override {
+    ) external payable override nonReentrant {
         require(msg.sender == order.user, "Invalid order user");
         _executeOrder(order, route, recipient, feeBps);
         emit FulfilledOrder(order, msg.sender, recipient, feeBps, partner);
@@ -320,7 +321,7 @@ contract WidoRouter is IWidoRouter, Ownable {
         bytes32 s,
         uint256 feeBps,
         address partner
-    ) external override {
+    ) external override nonReentrant {
         require(verifyOrder(order, v, r, s), "Invalid order");
         nonces[order.user]++;
         _executeOrder(order, route, order.user, feeBps);

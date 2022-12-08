@@ -44,7 +44,6 @@ describe(`WidoRouter`, function () {
   }
   let user: {address: string} & {WidoRouter: WidoRouter};
   let user1: {address: string} & {WidoRouter: WidoRouter};
-  let deployer: {address: string} & {WidoRouter: WidoRouter};
   let widoRouter: WidoRouter;
   let widoZapUniswapV2Pool: WidoZapUniswapV2Pool;
   let widoManagerAddr: string;
@@ -57,7 +56,6 @@ describe(`WidoRouter`, function () {
 
     user = users[0];
     user1 = users[1];
-    deployer = deployers[0];
 
     await utils.prepForToken(user.address, USDC, String(2000 * 1e6));
   });
@@ -1164,5 +1162,58 @@ describe(`WidoRouter`, function () {
         30,
         user1.address
       );
+  });
+
+  it(`should prevent reentrancy`, async function () {
+    const fromToken = USDC;
+    const toToken = USDC_WETH_LP;
+
+    const signer = await ethers.getSigner(user.address);
+
+    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+
+    const amount = "100000000";
+    const dataZapIn = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
+      UNI_ROUTER,
+      USDC_WETH_LP,
+      USDC,
+      amount,
+      1,
+    ]);
+
+    const dataExecuteOrder = widoRouter.interface.encodeFunctionData(
+      "executeOrder(((address,uint256)[],(address,uint256)[],address,uint32,uint32),(address,address,bytes,int32)[],uint256,address)",
+      [[[[fromToken, amount]], [[toToken, "1"]], user.address, "0", "0"], [], 0, ZERO_ADDRESS]
+    );
+
+    const swapRoute: IWidoRouter.StepStruct[] = [
+      {fromToken, targetAddress: widoZapUniswapV2Pool.address, data: dataZapIn, amountIndex: 100},
+      {fromToken: toToken, targetAddress: widoRouter.address, data: dataExecuteOrder, amountIndex: -1},
+    ];
+
+    await expect(
+      user.WidoRouter.functions[executeOrderFn](
+        {
+          user: user.address,
+          inputs: [
+            {
+              tokenAddress: fromToken,
+              amount,
+            },
+          ],
+          outputs: [
+            {
+              tokenAddress: toToken,
+              minOutputAmount: "1",
+            },
+          ],
+          nonce: "0",
+          expiration: "0",
+        },
+        swapRoute,
+        30,
+        ZERO_ADDRESS
+      )
+    ).to.be.revertedWith("ReentrancyGuard: reentrant call");
   });
 });
