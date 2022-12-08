@@ -141,14 +141,6 @@ contract WidoRouter is IWidoRouter, Ownable {
         }
     }
 
-    function hash(OrderInput memory orderInput) internal pure returns (bytes32) {
-        return keccak256(abi.encode(ORDER_INPUT_TYPEHASH, orderInput));
-    }
-
-    function hash(OrderOutput memory orderOutput) internal pure returns (bytes32) {
-        return keccak256(abi.encode(ORDER_OUTPUT_TYPEHASH, orderOutput));
-    }
-
     function hash(OrderInput[] memory orderInput) internal pure returns (bytes32) {
         bytes32[] memory result = new bytes32[](orderInput.length);
         for (uint256 i = 0; i < orderInput.length; ) {
@@ -267,10 +259,8 @@ contract WidoRouter is IWidoRouter, Ownable {
     /// @param fromToken Address of the token for the fee
     /// @param amount Amount of tokens to subtract the fee
     /// @param feeBps Fee in basis points (bps)
-    /// @return uint256 The amount of token or native tokens for the order less the fee
     /// @dev Sends the fee to the bank to not maintain any balance in the contract
-    /// @dev Does not charge fee if the input or final token is in the fee whitelist
-    function _collectFees(address fromToken, uint256 amount, uint256 feeBps) private returns (uint256) {
+    function _collectFees(address fromToken, uint256 amount, uint256 feeBps) private {
         require(feeBps <= 100, "Fee out of range");
         uint256 fee = (amount * feeBps) / 10000;
         if (fromToken == address(0)) {
@@ -278,7 +268,6 @@ contract WidoRouter is IWidoRouter, Ownable {
         } else {
             ERC20(fromToken).safeTransfer(bank, fee);
         }
-        return amount - fee;
     }
 
     /// @notice Executes order to transform ERC20 token from order.fromToken to order.toToken
