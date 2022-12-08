@@ -24,7 +24,7 @@ const setup = deployments.createFixture(async () => {
 const executeOrderFn =
   "executeOrder(((address,uint256)[],(address,uint256)[],address,uint32,uint32),(address,address,bytes,int32)[],uint256,address)";
 
-describe(`WidoManager`, function () {
+describe(`WidoTokenManager`, function () {
   if (!["mainnet"].includes(process.env.HARDHAT_FORK as ChainName)) {
     return;
   }
@@ -33,7 +33,7 @@ describe(`WidoManager`, function () {
 
   let widoRouter: WidoRouter;
   let usdcContract: ERC20;
-  let widoManagerAddr: string;
+  let widoTokenManagerAddr: string;
 
   before(async function () {
     const {WidoRouter, users, USDC} = await setup();
@@ -41,7 +41,7 @@ describe(`WidoManager`, function () {
     usdcContract = USDC;
     alice = users[0];
     bob = users[1];
-    widoManagerAddr = await widoRouter.widoManager();
+    widoTokenManagerAddr = await widoRouter.widoTokenManager();
   });
 
   it(`should not zap other people's funds`, async function () {
@@ -51,9 +51,9 @@ describe(`WidoManager`, function () {
     const stolenAmount = String(100 * 1e6);
 
     await utils.prepForToken(alice.address, WETH, "1");
-    await utils.approveForToken(await ethers.getSigner(alice.address), WETH, widoManagerAddr);
+    await utils.approveForToken(await ethers.getSigner(alice.address), WETH, widoTokenManagerAddr);
     await utils.prepForToken(bob.address, USDC, stolenAmount);
-    await utils.approveForToken(await ethers.getSigner(bob.address), USDC, widoManagerAddr);
+    await utils.approveForToken(await ethers.getSigner(bob.address), USDC, widoTokenManagerAddr);
     // act
     const steps: IWidoRouter.StepStruct[] = [
       {

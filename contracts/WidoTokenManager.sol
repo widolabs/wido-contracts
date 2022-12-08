@@ -4,9 +4,9 @@ pragma solidity 0.8.7;
 
 import "solmate/src/utils/SafeTransferLib.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IWidoManager.sol";
+import "./interfaces/IWidoTokenManager.sol";
 
-contract WidoManager is IWidoManager, Ownable {
+contract WidoTokenManager is IWidoTokenManager, Ownable {
     using SafeTransferLib for ERC20;
 
     /// @notice Transfers tokens or native tokens from the user

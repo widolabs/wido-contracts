@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/IWidoRouter.sol";
-import "./WidoManager.sol";
+import "./WidoTokenManager.sol";
 
 error SlippageTooHigh(uint256 expectedAmount, uint256 actualAmount);
 
@@ -48,7 +48,7 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
     // Address of fee bank
     address public bank;
 
-    WidoManager public immutable widoManager;
+    WidoTokenManager public immutable widoTokenManager;
 
     /// @notice Event emitted when the order is fulfilled
     /// @param order The order that was fulfilled
@@ -76,7 +76,7 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
 
         wrappedNativeToken = _wrappedNativeToken;
         bank = _bank;
-        widoManager = new WidoManager();
+        widoTokenManager = new WidoTokenManager();
     }
 
     /// @notice Sets the bank address
@@ -105,7 +105,7 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < route.length; ) {
             Step calldata step = route[i];
 
-            require(step.targetAddress != address(widoManager), "Wido: forbidden call to WidoManager");
+            require(step.targetAddress != address(widoTokenManager), "Wido: forbidden call to WidoTokenManager");
 
             uint256 balance;
             uint256 value;
@@ -212,7 +212,7 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
     /// @dev Expects the steps in the route to transform order.fromToken to order.toToken
     /// @dev Expects at least order.minToTokenAmount to be transferred to the recipient
     function _executeOrder(Order calldata order, Step[] calldata route, address recipient, uint256 feeBps) private {
-        widoManager.pullTokens(order.user, order.inputs);
+        widoTokenManager.pullTokens(order.user, order.inputs);
 
         for (uint256 i = 0; i < order.inputs.length; ) {
             IWidoRouter.OrderInput calldata input = order.inputs[i];

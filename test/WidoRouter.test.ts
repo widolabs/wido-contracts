@@ -45,13 +45,13 @@ describe(`WidoRouter`, function () {
   let user1: {address: string} & {WidoRouter: WidoRouter};
   let widoRouter: WidoRouter;
   let widoZapUniswapV2Pool: WidoZapUniswapV2Pool;
-  let widoManagerAddr: string;
+  let widoTokenManagerAddr: string;
 
   before(async function () {
     const {WidoRouter, WidoZapUniswapV2Pool, users, deployers} = await setup();
     widoRouter = WidoRouter;
     widoZapUniswapV2Pool = WidoZapUniswapV2Pool;
-    widoManagerAddr = await widoRouter.widoManager();
+    widoTokenManagerAddr = await widoRouter.widoTokenManager();
 
     user = users[0];
     user1 = users[1];
@@ -65,7 +65,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
     const initFromTokenBal = await utils.balanceOf(fromToken, user.address);
     const initToTokenBal = await utils.balanceOf(toToken, user.address);
 
@@ -122,7 +122,7 @@ describe(`WidoRouter`, function () {
     const dustOnRouter = await ethers.provider.getBalance(widoRouter.address);
 
     await utils.prepForToken(user.address, fromToken, amount.toString());
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
     const initFromTokenBal = await utils.balanceOf(fromToken, user.address);
 
     const wethContract = new ethers.Contract(WETH, WethAbi, signer);
@@ -174,7 +174,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const amount = "100000000";
     const data = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
@@ -221,7 +221,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
     const initFromTokenBal = await utils.balanceOf(fromToken, user.address);
     const initFromTokenBal1 = await utils.balanceOf(fromToken, user1.address);
     const initToTokenBal = await utils.balanceOf(toToken, user.address);
@@ -281,7 +281,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const amount = "100000000";
     const data = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
@@ -329,7 +329,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
     const initFromTokenBal = await utils.balanceOf(fromToken, user.address);
     const initToTokenBal = await utils.balanceOf(toToken, user.address);
 
@@ -390,7 +390,7 @@ describe(`WidoRouter`, function () {
     const signer = await ethers.getSigner(user.address);
     const signer1 = await ethers.getSigner(user1.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const amount = "100000000";
     const data = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
@@ -444,7 +444,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const amount = "100000000";
     const data = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
@@ -498,7 +498,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const amount = "100000000";
     const data = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
@@ -552,7 +552,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const amount = "100000000";
     const data = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
@@ -787,7 +787,7 @@ describe(`WidoRouter`, function () {
       },
     ];
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     await user.WidoRouter.functions[executeOrderFn](
       {
@@ -897,7 +897,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const bank = await widoRouter.bank();
     const initTreasuryBal = await utils.balanceOf(fromToken, bank);
@@ -948,7 +948,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const bank = await widoRouter.bank();
     const initTreasuryBal = await utils.balanceOf(fromToken, bank);
@@ -1000,7 +1000,7 @@ describe(`WidoRouter`, function () {
     const signer = await ethers.getSigner(user.address);
     const initFromTokenBal = await utils.balanceOf(fromToken, user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const bank = await widoRouter.bank();
     const initTreasuryBal = await utils.balanceOf(fromToken, bank);
@@ -1051,7 +1051,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const bank = await widoRouter.bank();
     const initTreasuryBal = await utils.balanceOf(fromToken, bank);
@@ -1102,7 +1102,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const amount = "100000000";
     const data = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
@@ -1169,7 +1169,7 @@ describe(`WidoRouter`, function () {
 
     const signer = await ethers.getSigner(user.address);
 
-    await utils.approveForToken(signer, fromToken, widoManagerAddr);
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
 
     const amount = "100000000";
     const dataZapIn = (widoZapUniswapV2Pool as WidoZapUniswapV2Pool).interface.encodeFunctionData("zapIn", [
