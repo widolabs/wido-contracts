@@ -7,7 +7,6 @@ import {setupUsers} from "./utils/users";
 import {USDC_MAP, WETH_MAP, ZERO_ADDRESS} from "./utils/addresses";
 import {ChainName} from "wido";
 import {IWidoRouter} from "../typechain/contracts/WidoRouter";
-import {beforeAll, describe, it} from "vitest";
 
 const setup = deployments.createFixture(async () => {
   await deployments.fixture(["WidoRouter", "USDC"]);
@@ -23,9 +22,9 @@ const setup = deployments.createFixture(async () => {
 });
 
 const executeOrderFn =
-  "executeOrder((address,address,address,uint256,uint256,uint32,uint32),(address,address,address,bytes,int32)[],uint256,address)";
+  "executeOrder(((address,uint256)[],(address,uint256)[],address,uint32,uint32),(address,address,bytes,int32)[],uint256,address)";
 
-describe(`WidoManager`, function () {
+describe(`WidoTokenManager`, function () {
   if (!["mainnet"].includes(process.env.HARDHAT_FORK as ChainName)) {
     return;
   }
@@ -34,31 +33,31 @@ describe(`WidoManager`, function () {
 
   let widoRouter: WidoRouter;
   let usdcContract: ERC20;
-  let widoManagerAddr: string;
+  let widoTokenManagerAddr: string;
 
-  beforeAll(async function () {
+  before(async function () {
     const {WidoRouter, users, USDC} = await setup();
     widoRouter = WidoRouter;
     usdcContract = USDC;
     alice = users[0];
     bob = users[1];
-    widoManagerAddr = await widoRouter.widoManager();
+    widoTokenManagerAddr = await widoRouter.widoTokenManager();
   });
 
   it(`should not zap other people's funds`, async function () {
     // arrange
-    const ETH = ZERO_ADDRESS;
     const WETH = WETH_MAP.mainnet;
     const USDC = USDC_MAP.mainnet;
     const stolenAmount = String(100 * 1e6);
 
+    await utils.prepForToken(alice.address, WETH, "1");
+    await utils.approveForToken(await ethers.getSigner(alice.address), WETH, widoTokenManagerAddr);
     await utils.prepForToken(bob.address, USDC, stolenAmount);
-    await utils.approveForToken(await ethers.getSigner(bob.address), USDC, widoManagerAddr);
+    await utils.approveForToken(await ethers.getSigner(bob.address), USDC, widoTokenManagerAddr);
     // act
     const steps: IWidoRouter.StepStruct[] = [
       {
         fromToken: WETH,
-        toToken: USDC,
         targetAddress: usdcContract.address,
         data: usdcContract.interface.encodeFunctionData("transferFrom", [
           bob.address,
@@ -71,19 +70,24 @@ describe(`WidoManager`, function () {
     const promise = alice.WidoRouter.functions[executeOrderFn](
       {
         user: alice.address,
-        fromToken: ETH,
-        toToken: USDC,
-        fromTokenAmount: "1",
-        minToTokenAmount: stolenAmount,
+        inputs: [
+          {
+            tokenAddress: WETH,
+            amount: "1",
+          },
+        ],
+        outputs: [
+          {
+            tokenAddress: USDC,
+            minOutputAmount: stolenAmount,
+          },
+        ],
         nonce: "0",
         expiration: "0",
       },
       steps,
       30,
-      ZERO_ADDRESS,
-      {
-        value: 1,
-      }
+      ZERO_ADDRESS
     );
     // assert
     await expect(promise).to.be.revertedWith("ERC20: transfer amount exceeds allowance");

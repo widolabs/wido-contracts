@@ -6,7 +6,6 @@ import {WidoZapUniswapV2Pool} from "../typechain";
 import {setupUsers} from "./utils/users";
 import {UNI_ROUTER_MAP, USDC_MAP, USDC_WETH_LP_MAP, WETH_MAP} from "./utils/addresses";
 import {ChainName} from "wido";
-import {beforeAll, describe, it} from "vitest";
 
 const setup = deployments.createFixture(async () => {
   await deployments.fixture(["WidoZapUniswapV2Pool"]);
@@ -32,7 +31,7 @@ describe(`UniV2Zap`, function () {
   let user: {address: string} & {WidoZapUniswapV2Pool: WidoZapUniswapV2Pool};
   let widoZapUniswapV2Pool: WidoZapUniswapV2Pool;
 
-  beforeAll(async function () {
+  before(async function () {
     const {WidoZapUniswapV2Pool, users} = await setup();
     widoZapUniswapV2Pool = WidoZapUniswapV2Pool;
     user = users[0];

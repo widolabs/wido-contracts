@@ -141,19 +141,9 @@ async function performAction(rawArgs) {
         options.blockNumber ? `HARDHAT_FORK_NUMBER=${options.blockNumber}` : ""
       } ${
         options["no-impersonation"] ? `HARDHAT_DEPLOY_NO_IMPERSONATION=true` : ""
-      } HARDHAT_DEPLOY_FIXTURE=true HARDHAT_COMPILE=true vitest run ${extra.join(" ")}`
-    );
-  } else if (firstArg === "fork:test:ui") {
-    const {fixedArgs, options, extra} = parseArgs(args, 1, {
-      blockNumber: "string",
-      "no-impersonation": "boolean",
-    });
-    await execute(
-      `cross-env HARDHAT_FORK=${fixedArgs[0]} ${
-        options.blockNumber ? `HARDHAT_FORK_NUMBER=${options.blockNumber}` : ""
-      } ${
-        options["no-impersonation"] ? `HARDHAT_DEPLOY_NO_IMPERSONATION=true` : ""
-      } HARDHAT_DEPLOY_FIXTURE=true HARDHAT_COMPILE=true vitest --ui ${extra.join(" ")}`
+      } HARDHAT_DEPLOY_FIXTURE=true HARDHAT_COMPILE=true mocha 'test/**/*.test.ts' --recursive test --reporter mochawesome ${extra.join(
+        " "
+      )}`
     );
   } else if (firstArg === "fork:dev") {
     const {fixedArgs, options, extra} = parseArgs(args, 1, {

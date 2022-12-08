@@ -132,6 +132,9 @@ const config: HardhatUserConfig = {
   preprocess: {
     eachLine: removeConsoleLog((hre) => hre.network.name !== "hardhat" && hre.network.name !== "localhost"),
   },
+  mocha: {
+    timeout: 0,
+  },
   docgen: process.env.SKIP_DOCGEN
     ? {}
     : {
