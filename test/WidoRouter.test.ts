@@ -8,7 +8,6 @@ import {UNI_ROUTER_MAP, USDC_MAP, USDC_WETH_LP_MAP, WETH_MAP, ZERO_ADDRESS} from
 import {ChainName} from "wido";
 import {IWidoRouter} from "../typechain/contracts/WidoRouter";
 import {BigNumber} from "ethers";
-import {beforeAll, describe, it} from "vitest";
 import WethAbi from "../abi/weth.json";
 
 const setup = deployments.createFixture(async () => {
@@ -48,7 +47,7 @@ describe(`WidoRouter`, function () {
   let widoZapUniswapV2Pool: WidoZapUniswapV2Pool;
   let widoManagerAddr: string;
 
-  beforeAll(async function () {
+  before(async function () {
     const {WidoRouter, WidoZapUniswapV2Pool, users, deployers} = await setup();
     widoRouter = WidoRouter;
     widoZapUniswapV2Pool = WidoZapUniswapV2Pool;

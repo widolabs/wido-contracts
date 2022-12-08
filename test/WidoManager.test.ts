@@ -7,7 +7,6 @@ import {setupUsers} from "./utils/users";
 import {USDC_MAP, WETH_MAP, ZERO_ADDRESS} from "./utils/addresses";
 import {ChainName} from "wido";
 import {IWidoRouter} from "../typechain/contracts/WidoRouter";
-import {beforeAll, describe, it} from "vitest";
 
 const setup = deployments.createFixture(async () => {
   await deployments.fixture(["WidoRouter", "USDC"]);
@@ -36,7 +35,7 @@ describe(`WidoManager`, function () {
   let usdcContract: ERC20;
   let widoManagerAddr: string;
 
-  beforeAll(async function () {
+  before(async function () {
     const {WidoRouter, users, USDC} = await setup();
     widoRouter = WidoRouter;
     usdcContract = USDC;
