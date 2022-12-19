@@ -328,8 +328,6 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
         emit FulfilledOrder(order, msg.sender, order.user, feeBps, partner);
     }
 
-    /// @notice Reverts if the native tokens are sent directly to the contract
-    receive() external payable {
-        require(msg.sender == wrappedNativeToken);
-    }
+    /// @notice Allow receiving of native tokens
+    receive() external payable {}
 }
