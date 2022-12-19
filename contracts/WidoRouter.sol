@@ -37,8 +37,6 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
     bytes32 private constant ORDER_OUTPUT_TYPEHASH =
         keccak256(abi.encodePacked("OrderOutput(address tokenAddress,uint256 minOutputAmount)"));
 
-    bytes32 public immutable DOMAIN_SEPARATOR;
-
     // Nonce for executing order with EIP-712 signatures.
     mapping(address => uint256) public nonces;
 
@@ -69,10 +67,6 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
         address _bank // uint256 _feeBps
     ) {
         require(_wrappedNativeToken != address(0) && _bank != address(0), "Addresses cannot be zero address");
-
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(EIP712_DOMAIN_TYPEHASH, keccak256("WidoRouter"), keccak256("1"), block.chainid, address(this))
-        );
 
         wrappedNativeToken = _wrappedNativeToken;
         bank = _bank;
@@ -185,6 +179,9 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
     /// @param s s of the signature
     /// @return bool True if the order is valid
     function verifyOrder(Order calldata order, uint8 v, bytes32 r, bytes32 s) public view override returns (bool) {
+        bytes32 DOMAIN_SEPARATOR = keccak256(
+            abi.encode(EIP712_DOMAIN_TYPEHASH, keccak256("WidoRouter"), keccak256("1"), block.chainid, address(this))
+        );
         address recoveredAddress = ECDSA.recover(
             keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hash(order))),
             v,
