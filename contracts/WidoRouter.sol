@@ -264,10 +264,12 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
     function _collectFees(address fromToken, uint256 amount, uint256 feeBps) private {
         require(feeBps <= 100, "Fee out of range");
         uint256 fee = (amount * feeBps) / 10000;
-        if (fromToken == address(0)) {
-            bank.safeTransferETH(fee);
-        } else {
-            ERC20(fromToken).safeTransfer(bank, fee);
+        if (fee > 0) {
+            if (fromToken == address(0)) {
+                bank.safeTransferETH(fee);
+            } else {
+                ERC20(fromToken).safeTransfer(bank, fee);
+            }
         }
     }
 
