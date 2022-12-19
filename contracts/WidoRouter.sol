@@ -52,14 +52,14 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
 
     /// @notice Event emitted when the order is fulfilled
     /// @param order The order that was fulfilled
-    /// @param recipient Recipient of the final tokens of the order
     /// @param sender The msg.sender
+    /// @param recipient Recipient of the final tokens of the order
     /// @param feeBps Fee in basis points (bps)
     /// @param partner Partner address
     event FulfilledOrder(
         Order order,
-        address recipient,
         address indexed sender,
+        address recipient,
         uint256 feeBps,
         address indexed partner
     );
