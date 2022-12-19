@@ -43,6 +43,7 @@ describe(`WidoRouter`, function () {
   }
   let user: {address: string} & {WidoRouter: WidoRouter};
   let user1: {address: string} & {WidoRouter: WidoRouter};
+  let deployer: {address: string} & {WidoRouter: WidoRouter};
   let widoRouter: WidoRouter;
   let widoZapUniswapV2Pool: WidoZapUniswapV2Pool;
   let widoTokenManagerAddr: string;
@@ -55,6 +56,7 @@ describe(`WidoRouter`, function () {
 
     user = users[0];
     user1 = users[1];
+    deployer = deployers[0];
 
     await utils.prepForToken(user.address, USDC, String(2000 * 1e6));
   });
@@ -1214,5 +1216,9 @@ describe(`WidoRouter`, function () {
         ZERO_ADDRESS
       )
     ).to.be.revertedWith("ReentrancyGuard: reentrant call");
+  });
+
+  it(`should update bank address`, async function () {
+    await expect(deployer.WidoRouter.setBank(user.address)).to.emit(user.WidoRouter, "SetBank").withArgs(user.address);
   });
 });
