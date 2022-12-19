@@ -64,6 +64,12 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
         address indexed partner
     );
 
+    /// @notice Event emitted when the bank address is updated
+    /// @param bank The updated address of the bank
+    event SetBank(
+        address bank
+    );
+
     constructor(
         address _wrappedNativeToken,
         address _bank // uint256 _feeBps
@@ -82,8 +88,9 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
     /// @notice Sets the bank address
     /// @param _bank The address of the new bank
     function setBank(address _bank) external onlyOwner {
-        require(_bank != address(0), "Bank address cannot be zero address");
+        require(_bank != address(0) && _bank != address(this), "Bank address cannot be zero address or Wido Router address");
         bank = _bank;
+        emit SetBank(_bank);
     }
 
     /// @notice Approve a token spending
