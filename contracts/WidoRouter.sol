@@ -105,7 +105,10 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < route.length; ) {
             Step calldata step = route[i];
 
-            require(step.targetAddress != address(widoTokenManager), "Wido: forbidden call to WidoTokenManager");
+            bytes4 selector = bytes4(step.data);
+            require(step.targetAddress != address(widoTokenManager), "Forbidden call to WidoTokenManager");
+            require(selector != bytes4(keccak256("approve(address,uint256)")), "Forbidden call to approve");
+            require(selector != bytes4(keccak256("increaseAllowance(address,uint256)")), "Forbidden call to increaseAllowance");
 
             uint256 balance;
             uint256 value;

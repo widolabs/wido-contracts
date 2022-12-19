@@ -9,6 +9,7 @@ import {ChainName} from "wido";
 import {IWidoRouter} from "../typechain/contracts/WidoRouter";
 import {BigNumber} from "ethers";
 import WethAbi from "../abi/weth.json";
+import erc20Abi from "../abi/erc20.json";
 
 const setup = deployments.createFixture(async () => {
   await deployments.fixture(["WidoRouter", "WidoZapUniswapV2Pool"]);
@@ -1214,5 +1215,103 @@ describe(`WidoRouter`, function () {
         ZERO_ADDRESS
       )
     ).to.be.revertedWith("ReentrancyGuard: reentrant call");
+  });
+
+  it(`should not call approve in _executeSteps`, async function () {
+    const fromToken = WETH;
+    const toToken = WETH;
+    const amount = BigNumber.from(10).pow(18);
+
+    const signer = await ethers.getSigner(user.address);
+
+    await utils.prepForToken(user.address, fromToken, amount.toString());
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
+
+    const wethContract = new ethers.Contract(WETH, WethAbi, signer);
+    const swapRoute: IWidoRouter.StepStruct[] = [
+      {
+        fromToken,
+        targetAddress: WETH,
+        data: wethContract.interface.encodeFunctionData("approve", [
+          user.address,
+          ethers.constants.MaxUint256.toString(),
+        ]),
+        amountIndex: -1,
+      },
+    ];
+
+    await expect(
+      user.WidoRouter.functions[executeOrderFn](
+        {
+          user: user.address,
+          inputs: [
+            {
+              tokenAddress: fromToken,
+              amount,
+            },
+          ],
+          outputs: [
+            {
+              tokenAddress: toToken,
+              minOutputAmount: "1",
+            },
+          ],
+          nonce: "0",
+          expiration: "0",
+        },
+        swapRoute,
+        0,
+        ZERO_ADDRESS
+      )
+    ).to.be.revertedWith("Forbidden call to approve");
+  });
+
+  it(`should not call increaseAllowance in _executeSteps`, async function () {
+    const fromToken = WETH;
+    const toToken = WETH;
+    const amount = BigNumber.from(10).pow(18);
+
+    const signer = await ethers.getSigner(user.address);
+
+    await utils.prepForToken(user.address, fromToken, amount.toString());
+    await utils.approveForToken(signer, fromToken, widoTokenManagerAddr);
+
+    const usdcContract = new ethers.Contract(USDC, erc20Abi, signer);
+    const swapRoute: IWidoRouter.StepStruct[] = [
+      {
+        fromToken,
+        targetAddress: WETH,
+        data: usdcContract.interface.encodeFunctionData("increaseAllowance", [
+          user.address,
+          ethers.constants.MaxUint256.toString(),
+        ]),
+        amountIndex: -1,
+      },
+    ];
+
+    await expect(
+      user.WidoRouter.functions[executeOrderFn](
+        {
+          user: user.address,
+          inputs: [
+            {
+              tokenAddress: fromToken,
+              amount,
+            },
+          ],
+          outputs: [
+            {
+              tokenAddress: toToken,
+              minOutputAmount: "1",
+            },
+          ],
+          nonce: "0",
+          expiration: "0",
+        },
+        swapRoute,
+        0,
+        ZERO_ADDRESS
+      )
+    ).to.be.revertedWith("Forbidden call to increaseAllowance");
   });
 });
