@@ -8,11 +8,9 @@ Check it out live: https://app.joinwido.com
 
 [Reach out](https://www.joinwido.com/contact) in case of any questions.
 
-## Audit
+## Audits
 
-Re-audit is in progress.
-
-Previous audit of our contracts by [CertiK](https://www.certik.com/projects/wido) on Oct 2022 can be viewed [here](https://certik-public-assets.s3.amazonaws.com/CertiK-Audit-for-Wido---Audit-v4.pdf).
+* CertiK (13th Dec 2022): [CertiK's Page](https://www.certik.com/projects/wido), [Full Report](https://certik-public-assets.s3.amazonaws.com/CertiK-Audit-for-Wido---Audit-v4.pdf)
 
 ## Support
 
