@@ -6,6 +6,8 @@ import hre from "hardhat";
 import {ethers} from "hardhat";
 import erc20ABI from "../../abi/erc20.json";
 import {IWidoRouter} from "../../typechain";
+import {Comet, CometExt} from "../../generated";
+import {ZERO_ADDRESS} from "./addresses";
 
 const whaleAddress: {[key: string]: string} = {
   // Mainnet
@@ -143,4 +145,94 @@ export async function buildAndSignOrder(
     r: signature.r,
     s: signature.s,
   };
+}
+
+export async function prepareAllowBySigSignature(
+  comet: Comet,
+  cometExt: CometExt,
+  signer: SignerWithAddress,
+  manager: string,
+  isAllowed: boolean,
+  nonce: number | BigNumber
+) {
+  const domain = {
+    name: await cometExt.name(),
+    version: await cometExt.version(),
+    chainId: await ethers.provider.getNetwork().then((n) => n.chainId),
+    verifyingContract: comet.address,
+  };
+  const data = {
+    owner: signer.address,
+    manager,
+    isAllowed,
+    nonce,
+    // set to 15 minutes
+    expiry: await currentTimestamp().then((t) => t + 15 * 60),
+  };
+  const signature = await signer._signTypedData(
+    domain,
+    {
+      Authorization: [
+        {name: "owner", type: "address"},
+        {name: "manager", type: "address"},
+        {name: "isAllowed", type: "bool"},
+        {name: "nonce", type: "uint256"},
+        {name: "expiry", type: "uint256"},
+      ],
+    },
+    data
+  );
+  return {..._parseSignature(signature), expiry: data.expiry};
+}
+
+export async function prepareAllowBySigTx(
+  comet: Comet,
+  cometExt: CometExt,
+  owner: SignerWithAddress,
+  managerAddress: string,
+  isAllowed: boolean,
+  nonce: number | BigNumber
+) {
+  const {r, v, s, expiry} = await prepareAllowBySigSignature(comet, cometExt, owner, managerAddress, isAllowed, nonce);
+  const tx = await cometExt.populateTransaction.allowBySig(
+    owner.address,
+    managerAddress,
+    isAllowed,
+    nonce,
+    expiry,
+    v,
+    r,
+    s
+  );
+  tx.to = comet.address;
+  return tx;
+}
+
+export async function prepareAllowBySigSteps(
+  comet: Comet,
+  cometExt: CometExt,
+  owner: SignerWithAddress,
+  managerAddress: string
+) {
+  const nonce = await comet.userNonce(owner.address);
+  const txAllow = await prepareAllowBySigTx(comet, cometExt, owner, managerAddress, true, nonce);
+  const txDisallow = await prepareAllowBySigTx(comet, cometExt, owner, managerAddress, false, nonce.add(1));
+  return {
+    allow: {fromToken: ZERO_ADDRESS, targetAddress: txAllow.to!, data: txAllow.data!, amountIndex: -1},
+    disallow: {fromToken: ZERO_ADDRESS, targetAddress: txDisallow.to!, data: txDisallow.data!, amountIndex: -1},
+  };
+}
+
+export async function currentTimestamp() {
+  const blockNumber = ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNumber);
+  return block.timestamp;
+}
+
+export function toWei(amount: number | string) {
+  return ethers.utils.parseUnits(String(amount));
+}
+
+export function toWei6(amount: number | string) {
+  return ethers.utils.parseUnits(String(amount), 6);
 }
