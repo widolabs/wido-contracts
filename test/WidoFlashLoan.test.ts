@@ -59,7 +59,7 @@ describe(`WidoRouter`, () => {
     const swapData = mockSwap.interface.encodeFunctionData("swapWethToWbtc", [
       utils.toWei("1"),
       flashLoanAmount,
-      widoFlashLoan.address,
+      widoRouter.address,
     ]);
 
     // track the initial principal of user
@@ -80,7 +80,12 @@ describe(`WidoRouter`, () => {
             amount: flashLoanAmount,
           },
         ],
-        outputs: [],
+        outputs: [
+          {
+            tokenAddress: WBTC_ADDRESS,
+            minOutputAmount: flashLoanAmount,
+          },
+        ],
         nonce: 0,
         expiration: 0,
       },
