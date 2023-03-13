@@ -60,8 +60,9 @@ describe(`WidoRouter`, () => {
     const principal = await comet.userBasic(user1.address).then((r) => r.principal);
 
     // user1 gives permission to WidoFlashLoan
-    const allowTx = await utils.prepareAllowBySigTx(comet, cometExt, user1, widoFlashLoan.address, true, 0);
-    await user1.sendTransaction(allowTx);
+    const tx = await cometExt.connect(user1).populateTransaction.allow(widoFlashLoan.address, true);
+    tx.to = comet.address;
+    await user1.sendTransaction(tx);
 
     // assume that swap of 1 weth will give 0.08 wbtc
     const flashLoanAmount = utils.toWei8(0.08);
