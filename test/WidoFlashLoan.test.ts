@@ -38,7 +38,9 @@ describe(`WidoRouter`, () => {
     mockSwap = await ethers.getContractFactory("MockSwap").then((f) => f.deploy(WETH_ADDRESS, WBTC_ADDRESS));
     widoFlashLoan = (await ethers
       .getContractFactory("WidoFlashLoan")
-      .then((f) => f.deploy(EULER_FLASH_LOAN_ADDRESS, WIDO_ROUTER, WIDO_TOKEN_MANAGER))) as WidoFlashLoan;
+      .then((f) =>
+        f.deploy(EULER_FLASH_LOAN_ADDRESS, WIDO_ROUTER, WIDO_TOKEN_MANAGER, comet.address)
+      )) as WidoFlashLoan;
   });
   it("Works", async () => {
     // provide eth to user1
@@ -54,6 +56,13 @@ describe(`WidoRouter`, () => {
     // user takes loan in usdc
     await comet.connect(user1).withdraw(USDC_ADDRESS, utils.toWei6("1000"));
 
+    // track the initial principal of user
+    const principal = await comet.userBasic(user1.address).then((r) => r.principal);
+
+    // user1 gives permission to WidoFlashLoan
+    const allowTx = await utils.prepareAllowBySigTx(comet, cometExt, user1, widoFlashLoan.address, true, 0);
+    await user1.sendTransaction(allowTx);
+
     // assume that swap of 1 weth will give 0.08 wbtc
     const flashLoanAmount = utils.toWei8(0.08);
     const swapData = mockSwap.interface.encodeFunctionData("swapWethToWbtc", [
@@ -61,63 +70,22 @@ describe(`WidoRouter`, () => {
       flashLoanAmount,
       widoRouter.address,
     ]);
-
-    // track the initial principal of user
-    const principal = await comet.userBasic(user1.address).then((r) => r.principal);
-
-    // in order to call comet.withdrawFrom user1 needs to give WidoRoute manager rights
-    const allowBySigSteps = await utils.prepareAllowBySigSteps(comet, cometExt, user1, WIDO_ROUTER);
-    await weth.connect(user1).approve(WIDO_TOKEN_MANAGER, utils.toWei("1"));
     // perform swap of locked weth to wbtc
-    await widoFlashLoan.swapCollateral(
-      WBTC_ADDRESS,
-      flashLoanAmount,
-      {
-        user: widoFlashLoan.address,
-        inputs: [
-          {
-            tokenAddress: WBTC_ADDRESS,
-            amount: flashLoanAmount,
-          },
-        ],
-        outputs: [
-          {
-            tokenAddress: WBTC_ADDRESS,
-            minOutputAmount: flashLoanAmount,
-          },
-        ],
-        nonce: 0,
-        expiration: 0,
-      },
-      [
-        allowBySigSteps.allow,
-        {
-          data: comet.interface.encodeFunctionData("supplyTo", [user1.address, WBTC_ADDRESS, flashLoanAmount]),
-          fromToken: WBTC_ADDRESS,
-          amountIndex: -1,
-          targetAddress: comet.address,
-        },
-        {
-          data: comet.interface.encodeFunctionData("withdrawFrom", [
-            user1.address,
-            widoRouter.address,
-            WETH_ADDRESS,
-            utils.toWei(1),
-          ]),
-          fromToken: ZERO_ADDRESS,
-          amountIndex: -1,
-          targetAddress: comet.address,
-        },
-        {targetAddress: mockSwap.address, data: swapData, fromToken: WETH_ADDRESS, amountIndex: -1},
-        allowBySigSteps.disallow,
-      ],
-      0,
-      ZERO_ADDRESS
-    );
+    await widoFlashLoan
+      .connect(user1)
+      .swapCollateral(
+        WBTC_ADDRESS,
+        flashLoanAmount,
+        WETH_ADDRESS,
+        utils.toWei("1"),
+        [{targetAddress: mockSwap.address, data: swapData, fromToken: WETH_ADDRESS, amountIndex: -1}],
+        0,
+        ZERO_ADDRESS
+      );
     // Collateral was supplied from WidoRouter to Compound
-    expect(await comet.queryFilter(comet.filters.SupplyCollateral(WIDO_ROUTER, user1.address))).length(1);
+    expect(await comet.queryFilter(comet.filters.SupplyCollateral(widoFlashLoan.address, user1.address))).length(1);
     // Collateral was withdrawn from Compound to WidoRouter
-    expect(await comet.queryFilter(comet.filters.WithdrawCollateral(user1.address, widoRouter.address))).length(1);
+    expect(await comet.queryFilter(comet.filters.WithdrawCollateral(user1.address, widoFlashLoan.address))).length(1);
 
     // user doesn't have WETH as collateral
     expect(await comet.userCollateral(user1.address, WETH_ADDRESS).then((r) => r.balance)).equal(0);
