@@ -12,7 +12,7 @@ import {ZERO_ADDRESS} from "./addresses";
 const whaleAddress: {[key: string]: string} = {
   // Mainnet
   "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "0xCFFAd3200574698b78f32232aa9D63eABD290703", // USDC
-  "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2": "0x06920c9fc643de77b99cb7670a944ad31eaaa260", // WETH
+  "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "0x57757E3D981446D585Af0D9Ae4d7DF6D64647806", // WETH
   "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": "0x6a0C777309ED8f502425AC106c5eac3A6245aaF6", // WBTC
   // Fantom Whale
   "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75": "0x8e1a14761c6637c25097d1724a8c5ec4f6f16e0b", // USDC
@@ -32,7 +32,7 @@ export async function getERC20Contract(address: string, signer: Signer | Provide
 
 export async function prepForEth(walletAddress: string) {
   const [owner] = await ethers.getSigners();
-  owner.sendTransaction({
+  await owner.sendTransaction({
     to: walletAddress,
     value: parseEther("10"),
   });

@@ -5,16 +5,16 @@ import "solmate/src/utils/SafeTransferLib.sol";
 
 contract MockSwap {
     using SafeTransferLib for ERC20;
-    ERC20 weth;
-    ERC20 wbtc;
+    ERC20 immutable weth;
+    ERC20 immutable wbtc;
 
     constructor(ERC20 _weth, ERC20 _wbtc) {
         weth = _weth;
         wbtc = _wbtc;
     }
 
-    function swapWethToWbtc(uint256 wethAmount, uint256 wbtcAmount, address recepient) external {
-        weth.safeTransferFrom(msg.sender, address(this), wethAmount);
-        wbtc.safeTransfer(recepient, wbtcAmount);
+    function swapWbtcToWeth(uint256 wbtcAmount, uint256 wethAmount, address recipient) external {
+        wbtc.safeTransferFrom(msg.sender, address(this), wbtcAmount);
+        weth.safeTransfer(recipient, wethAmount);
     }
 }
