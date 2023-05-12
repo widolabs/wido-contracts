@@ -9,7 +9,7 @@ import { ZERO_ADDRESS } from "./utils/addresses";
 import * as utils from "./utils/test-utils";
 import { BigNumber } from 'ethers';
 
-const EULER_FLASH_LOAN_ADDRESS = "0x4EAF187ad4cE325bF6C84070b51c2f7224A51321";
+const FLASH_LOAN_PROVIDER = "0x4EAF187ad4cE325bF6C84070b51c2f7224A51321";
 const WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 const WBTC_ADDRESS = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599";
 const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
@@ -58,7 +58,7 @@ describe(`WidoRouter`, () => {
     widoFlashLoan = (await ethers
       .getContractFactory("WidoFlashLoan")
       .then((f) =>
-        f.deploy(EULER_FLASH_LOAN_ADDRESS, WIDO_ROUTER, WIDO_TOKEN_MANAGER, comet.address)
+        f.deploy(FLASH_LOAN_PROVIDER, WIDO_ROUTER, WIDO_TOKEN_MANAGER, comet.address)
       )) as WidoFlashLoan;
   });
 
