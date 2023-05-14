@@ -35,7 +35,12 @@ contract WidoFlashLoan is IERC3156FlashBorrower {
         uint256 feeBps,
         address partner
     ) external {
+        // encode off-chain to save gas?
         bytes memory data = abi.encode(msg.sender, toSwap, toSwapAmount, route, feeBps, partner);
+
+        // approve amount+fee
+
+
         eulerFlashLoan.flashLoan(IERC3156FlashBorrower(this), token, amount, data);
     }
 
@@ -46,6 +51,7 @@ contract WidoFlashLoan is IERC3156FlashBorrower {
         uint256 fee,
         bytes calldata data
     ) external override returns (bytes32) {
+
         require(msg.sender == address(eulerFlashLoan), "Caller is not Euler");
         (
             address user,
@@ -71,6 +77,9 @@ contract WidoFlashLoan is IERC3156FlashBorrower {
 
         IWidoRouter.Order memory order = IWidoRouter.Order(inputs, outputs, address(this), 0, 0);
         widoRouter.executeOrder(order, route, feeBps, partner);
+
+
+
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
     }
 }
