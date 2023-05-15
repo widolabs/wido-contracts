@@ -14,7 +14,6 @@
       "./scripts",
       "./deploy",
       "./test",
-      "typechain/**/*",
-      "generated/**/*"
+      "typechain/**/*"
     ]
   }
