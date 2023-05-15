@@ -22,7 +22,7 @@ contract WidoFlashLoanTest is Test {
     address WBTC = address(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     address USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 
-    address user = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address user1 = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
     address initialCollateral = WBTC;
     uint256 initialAmount = 0.06e8;
@@ -41,11 +41,11 @@ contract WidoFlashLoanTest is Test {
         /** Arrange */
 
         // deal necessary amounts
-        deal(initialCollateral, user, initialAmount);
+        deal(initialCollateral, user1, initialAmount);
         deal(finalCollateral, address(mockSwap), finalAmount);
 
         // start impersonating user
-        vm.startPrank(user);
+        vm.startPrank(user1);
 
         // deposit into Compound
         IERC20(initialCollateral).approve(address(cometUsdc), initialAmount);
@@ -54,7 +54,7 @@ contract WidoFlashLoanTest is Test {
         cometUsdc.withdraw(address(USDC), 1000e6);
 
         // track the initial principal
-        int104 initialPrincipal = userPrincipal(user);
+        int104 initialPrincipal = userPrincipal(user1);
 
         // give permission to WidoFlashLoan
         cometUsdc.allow(address(widoFlashLoan), true);
@@ -73,11 +73,11 @@ contract WidoFlashLoanTest is Test {
 
         // define expected Event
         vm.expectEmit(true, true, false, false);
-        emit SupplyCollateral(address(widoFlashLoan), user, address(0), 0);
+        emit SupplyCollateral(address(widoFlashLoan), user1, address(0), 0);
 
         // define expected Event
         vm.expectEmit(true, true, false, false);
-        emit WithdrawCollateral(user, address(widoFlashLoan), address(0), 0);
+        emit WithdrawCollateral(user1, address(widoFlashLoan), address(0), 0);
 
         /** Act */
 
@@ -94,26 +94,26 @@ contract WidoFlashLoanTest is Test {
         /** Assert */
 
         // user doesn't have initial collateral
-        assertEq(userCollateral(user, initialCollateral), 0);
+        assertEq(userCollateral(user1, initialCollateral), 0);
 
         // user has final collateral deposited
-        assertEq(userCollateral(user, finalCollateral), finalAmount);
+        assertEq(userCollateral(user1, finalCollateral), finalAmount);
 
         // loan is still collateralized
-        assertTrue(cometUsdc.isBorrowCollateralized(user));
+        assertTrue(cometUsdc.isBorrowCollateralized(user1));
 
         // principal of user has not changed
-        int104 finalPrincipal = userPrincipal(user);
+        int104 finalPrincipal = userPrincipal(user1);
         assertEq(initialPrincipal, finalPrincipal);
     }
 
     function userPrincipal(address user) internal returns (int104) {
-        ICometTest.UserBasic memory userBasic = cometUsdc.userBasic(user);
-        return userBasic.principal;
+        ICometTest.UserBasic memory _userBasic = cometUsdc.userBasic(user);
+        return _userBasic.principal;
     }
 
     function userCollateral(address user, address asset) internal returns (uint128) {
-        ICometTest.UserCollateral memory userCollateral = cometUsdc.userCollateral(user, asset);
-        return userCollateral.balance;
+        ICometTest.UserCollateral memory _userCollateral = cometUsdc.userCollateral(user, asset);
+        return _userCollateral.balance;
     }
 }

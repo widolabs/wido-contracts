@@ -46,7 +46,7 @@ contract WidoFlashLoan is IERC3156FlashBorrower {
     }
 
     function onFlashLoan(
-        address initiator,
+        address /* initiator */,
         address lentAsset,
         uint256 lentAmount,
         uint256 fee,
