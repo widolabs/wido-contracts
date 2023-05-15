@@ -6,6 +6,7 @@ import "forge-std/StdUtils.sol";
 import "../contracts/WidoFlashLoan.sol";
 import "./mocks/MockSwap.sol";
 import "../contracts/interfaces/IComet.sol";
+import "./interfaces/ICometTest.sol";
 
 contract WidoFlashLoanTest is Test {
     WidoFlashLoan public widoFlashLoan;
@@ -13,7 +14,7 @@ contract WidoFlashLoanTest is Test {
     IERC3156FlashLender flashLoanProvider = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
     IWidoTokenManager widoTokenManager = IWidoTokenManager(0xF2F02200aEd0028fbB9F183420D3fE6dFd2d3EcD);
     IWidoRouter widoRouter = IWidoRouter(0x7Fb69e8fb1525ceEc03783FFd8a317bafbDfD394);
-    IComet cometUsdc = IComet(0xc3d688B66703497DAA19211EEdff47f25384cdc3);
+    ICometTest cometUsdc = ICometTest(0xc3d688B66703497DAA19211EEdff47f25384cdc3);
 
     MockSwap mockSwap;
 
@@ -32,7 +33,7 @@ contract WidoFlashLoanTest is Test {
     event WithdrawCollateral(address indexed src, address indexed to, address indexed asset, uint amount);
 
     function setUp() public {
-        widoFlashLoan = new WidoFlashLoan(flashLoanProvider, widoRouter, widoTokenManager, cometUsdc);
+        widoFlashLoan = new WidoFlashLoan(flashLoanProvider, widoRouter, widoTokenManager, IComet(address(cometUsdc)));
         mockSwap = new MockSwap(ERC20(WETH), ERC20(WBTC));
     }
 
@@ -107,12 +108,12 @@ contract WidoFlashLoanTest is Test {
     }
 
     function userPrincipal(address user) internal returns (int104) {
-        IComet.UserBasic memory userBasic = cometUsdc.userBasic(user);
+        ICometTest.UserBasic memory userBasic = cometUsdc.userBasic(user);
         return userBasic.principal;
     }
 
     function userCollateral(address user, address asset) internal returns (uint128) {
-        IComet.UserCollateral memory userCollateral = cometUsdc.userCollateral(user, asset);
+        ICometTest.UserCollateral memory userCollateral = cometUsdc.userCollateral(user, asset);
         return userCollateral.balance;
     }
 }

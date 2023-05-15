@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity 0.8.7;
 
 import "forge-std/Script.sol";
-import "../src/Scrow.sol";
 import "../contracts/WidoFlashLoan.sol";
 
 contract FlashLoanScript is Script {
@@ -12,9 +11,9 @@ contract FlashLoanScript is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
-        WidoFlashLoan wfl = new WidoFlashLoan(
-        // TODO
-        );
+        //WidoFlashLoan wfl = new WidoFlashLoan(
+        //// TODO
+        //);
 
         vm.stopBroadcast();
     }
