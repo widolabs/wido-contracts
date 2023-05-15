@@ -149,11 +149,3 @@ export async function buildAndSignOrder(
 export function toWei(amount: number | string) {
   return ethers.utils.parseUnits(String(amount));
 }
-
-export function toWei6(amount: number | string) {
-  return ethers.utils.parseUnits(String(amount), 6);
-}
-
-export function toWei8(amount: number | string) {
-  return ethers.utils.parseUnits(String(amount), 8);
-}
