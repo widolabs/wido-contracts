@@ -145,7 +145,3 @@ export async function buildAndSignOrder(
     s: signature.s,
   };
 }
-
-export function toWei(amount: number | string) {
-  return ethers.utils.parseUnits(String(amount));
-}
