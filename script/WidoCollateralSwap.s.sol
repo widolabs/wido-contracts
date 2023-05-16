@@ -2,7 +2,7 @@
 pragma solidity 0.8.7;
 
 import "forge-std/Script.sol";
-import "../contracts/WidoFlashLoan.sol";
+import "../contracts/WidoCollateralSwap.sol";
 
 contract WidoFlashLoanScript is Script {
     function setUp() public {}

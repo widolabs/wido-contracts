@@ -9,7 +9,7 @@ import {IWidoTokenManager} from "./interfaces/IWidoTokenManager.sol";
 import {IComet} from "./interfaces/IComet.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract WidoFlashLoan is IERC3156FlashBorrower {
+contract WidoCollateralSwap is IERC3156FlashBorrower {
     using SafeMath for uint256;
     IERC3156FlashLender public flashLoanProvider;
     IWidoRouter public widoRouter;
@@ -42,7 +42,7 @@ contract WidoFlashLoan is IERC3156FlashBorrower {
     ) external {
         bytes memory data = abi.encode(msg.sender, existingCollateral, route, feeBps, partner);
 
-        // approve finalCollateralAmount+fee
+        // approve finalCollateral.amount+fee
 
         flashLoanProvider.flashLoan(
             IERC3156FlashBorrower(this),

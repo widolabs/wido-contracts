@@ -3,13 +3,13 @@ pragma solidity 0.8.7;
 
 import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
-import "../contracts/WidoFlashLoan.sol";
+import "../contracts/WidoCollateralSwap.sol";
 import "./mocks/MockSwap.sol";
 import "../contracts/interfaces/IComet.sol";
 import "./interfaces/ICometTest.sol";
 
-contract WidoFlashLoanTest is Test {
-    WidoFlashLoan public widoFlashLoan;
+contract WidoCollateralSwapTest is Test {
+    WidoCollateralSwap public widoCollateralSwap;
 
     IERC3156FlashLender flashLoanProvider = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
     IWidoTokenManager widoTokenManager = IWidoTokenManager(0xF2F02200aEd0028fbB9F183420D3fE6dFd2d3EcD);
@@ -24,14 +24,14 @@ contract WidoFlashLoanTest is Test {
 
     address user1 = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
-    WidoFlashLoan.Collateral existingCollateral = WidoFlashLoan.Collateral(WBTC, 0.06e8);
-    WidoFlashLoan.Collateral finalCollateral = WidoFlashLoan.Collateral(WETH, 1e18);
+    WidoCollateralSwap.Collateral existingCollateral = WidoCollateralSwap.Collateral(WBTC, 0.06e8);
+    WidoCollateralSwap.Collateral finalCollateral = WidoCollateralSwap.Collateral(WETH, 1e18);
 
     event SupplyCollateral(address indexed from, address indexed dst, address indexed asset, uint amount);
     event WithdrawCollateral(address indexed src, address indexed to, address indexed asset, uint amount);
 
     function setUp() public {
-        widoFlashLoan = new WidoFlashLoan(flashLoanProvider, widoRouter, widoTokenManager, IComet(address(cometUsdc)));
+        widoCollateralSwap = new WidoCollateralSwap(flashLoanProvider, widoRouter, widoTokenManager, IComet(address(cometUsdc)));
         mockSwap = new MockSwap(ERC20(WETH), ERC20(WBTC));
     }
 
@@ -54,8 +54,8 @@ contract WidoFlashLoanTest is Test {
         // track the initial principal
         int104 initialPrincipal = userPrincipal(user1);
 
-        // give permission to WidoFlashLoan
-        cometUsdc.allow(address(widoFlashLoan), true);
+        // give permission to WidoCollateralSwap
+        cometUsdc.allow(address(widoCollateralSwap), true);
 
         // generate route for WidoRoute
         IWidoRouter.Step[] memory route = new IWidoRouter.Step[](1);
@@ -71,15 +71,15 @@ contract WidoFlashLoanTest is Test {
 
         // define expected Event
         vm.expectEmit(true, true, false, false);
-        emit SupplyCollateral(address(widoFlashLoan), user1, address(0), 0);
+        emit SupplyCollateral(address(widoCollateralSwap), user1, address(0), 0);
 
         // define expected Event
         vm.expectEmit(true, true, false, false);
-        emit WithdrawCollateral(user1, address(widoFlashLoan), address(0), 0);
+        emit WithdrawCollateral(user1, address(widoCollateralSwap), address(0), 0);
 
         /** Act */
 
-        widoFlashLoan.swapCollateral(
+        widoCollateralSwap.swapCollateral(
             existingCollateral,
             finalCollateral,
             route,
