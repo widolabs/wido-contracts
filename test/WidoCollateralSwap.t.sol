@@ -3,28 +3,20 @@ pragma solidity 0.8.7;
 
 import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../contracts/WidoCollateralSwap.sol";
 import "./mocks/MockSwap.sol";
 import "../contracts/interfaces/IComet.sol";
 import "./interfaces/ICometTest.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "./ForkTest.sol";
 
-contract WidoCollateralSwapTest is Test {
+contract WidoCollateralSwapTest is ForkTest {
     using SafeMath for uint256;
-    WidoCollateralSwap public widoCollateralSwap;
-
-    IERC3156FlashLender flashLoanProvider = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
-    IWidoTokenManager widoTokenManager = IWidoTokenManager(0xF2F02200aEd0028fbB9F183420D3fE6dFd2d3EcD);
-    IWidoRouter widoRouter = IWidoRouter(0x7Fb69e8fb1525ceEc03783FFd8a317bafbDfD394);
-    ICometTest cometUsdc = ICometTest(0xc3d688B66703497DAA19211EEdff47f25384cdc3);
-
+    WidoCollateralSwap widoCollateralSwap;
     MockSwap mockSwap;
 
-    address WETH = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    address WBTC = address(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
-    address USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-
-    address user1 = vm.addr(1);
+    IERC3156FlashLender constant flashLoanProvider = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
+    ICometTest constant cometUsdc = ICometTest(0xc3d688B66703497DAA19211EEdff47f25384cdc3);
 
     WidoCollateralSwap.Collateral existingCollateral = WidoCollateralSwap.Collateral(WBTC, 0.06e8);
     WidoCollateralSwap.Collateral finalCollateral = WidoCollateralSwap.Collateral(WETH, 1e18);
@@ -140,6 +132,7 @@ contract WidoCollateralSwapTest is Test {
         assertEq(initialPrincipal, finalPrincipal);
     }
 
+    /// @dev Generates the signature values for the `allowBySig` function
     function sign(
         address owner,
         address manager,
