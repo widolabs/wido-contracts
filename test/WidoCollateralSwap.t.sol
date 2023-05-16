@@ -7,8 +7,10 @@ import "../contracts/WidoCollateralSwap.sol";
 import "./mocks/MockSwap.sol";
 import "../contracts/interfaces/IComet.sol";
 import "./interfaces/ICometTest.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract WidoCollateralSwapTest is Test {
+    using SafeMath for uint256;
     WidoCollateralSwap public widoCollateralSwap;
 
     IERC3156FlashLender flashLoanProvider = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
@@ -22,7 +24,7 @@ contract WidoCollateralSwapTest is Test {
     address WBTC = address(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     address USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 
-    address user1 = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+    address user1 = vm.addr(1);
 
     WidoCollateralSwap.Collateral existingCollateral = WidoCollateralSwap.Collateral(WBTC, 0.06e8);
     WidoCollateralSwap.Collateral finalCollateral = WidoCollateralSwap.Collateral(WETH, 1e18);
@@ -49,13 +51,11 @@ contract WidoCollateralSwapTest is Test {
         IERC20(existingCollateral.addr).approve(address(cometUsdc), existingCollateral.amount);
         cometUsdc.supply(existingCollateral.addr, existingCollateral.amount);
 
+        // take a loan
         cometUsdc.withdraw(address(USDC), 1000e6);
 
         // track the initial principal
         int104 initialPrincipal = userPrincipal(user1);
-
-        // give permission to WidoCollateralSwap
-        cometUsdc.allow(address(widoCollateralSwap), true);
 
         // generate route for WidoRoute
         IWidoRouter.Step[] memory route = new IWidoRouter.Step[](1);
@@ -77,6 +77,39 @@ contract WidoCollateralSwapTest is Test {
         vm.expectEmit(true, true, false, false);
         emit WithdrawCollateral(user1, address(widoCollateralSwap), address(0), 0);
 
+
+        // generate allow signature
+        uint256 nonce = cometUsdc.userNonce(user1);
+        WidoCollateralSwap.Signature memory allowSignature = sign(
+            user1,
+            address(widoCollateralSwap),
+            true,
+            nonce,
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        // generate revoke signature
+        nonce = nonce.add(1);
+        WidoCollateralSwap.Signature memory revokeSignature = sign(
+            user1,
+            address(widoCollateralSwap),
+            false,
+            nonce,
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        WidoCollateralSwap.Signatures memory sigs = WidoCollateralSwap.Signatures(
+            allowSignature,
+            revokeSignature
+        );
+
+        // test allow is negative
+        // TODO
+
         /** Act */
 
         widoCollateralSwap.swapCollateral(
@@ -84,10 +117,14 @@ contract WidoCollateralSwapTest is Test {
             finalCollateral,
             route,
             0,
-            address(0)
+            address(0),
+            sigs
         );
 
         /** Assert */
+
+        // test allow is negative
+        // TODO
 
         // user doesn't have initial collateral
         assertEq(userCollateral(user1, existingCollateral.addr), 0);
@@ -101,6 +138,39 @@ contract WidoCollateralSwapTest is Test {
         // principal of user has not changed
         int104 finalPrincipal = userPrincipal(user1);
         assertEq(initialPrincipal, finalPrincipal);
+    }
+
+    function sign(
+        address owner,
+        address manager,
+        bool isAllowed,
+        uint256 nonce,
+        uint256 expiry,
+        string memory name,
+        string memory version
+    ) internal view returns (WidoCollateralSwap.Signature memory) {
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(name)),
+                keccak256(bytes(version)),
+                block.chainid,
+                address(cometUsdc)
+            )
+        );
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Authorization(address owner,address manager,bool isAllowed,uint256 nonce,uint256 expiry)"),
+                owner,
+                manager,
+                isAllowed,
+                nonce,
+                expiry
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, digest);
+        return WidoCollateralSwap.Signature(v, r, s);
     }
 
     function userPrincipal(address user) internal returns (int104) {

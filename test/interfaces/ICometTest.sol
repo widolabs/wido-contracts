@@ -17,6 +17,12 @@ interface ICometTest {
         uint128 _reserved;
     }
 
+    function name() external returns (string memory);
+
+    function version() external returns (string memory);
+
+    function userNonce(address user) external returns (uint256);
+
     function supply(address asset, uint amount) external;
 
     function withdraw(address asset, uint amount) external;

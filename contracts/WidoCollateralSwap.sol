@@ -21,6 +21,17 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         uint256 amount;
     }
 
+    struct Signatures {
+        Signature allow;
+        Signature revoke;
+    }
+
+    struct Signature {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+    }
+
     constructor(
         IERC3156FlashLender _flashLoanProvider,
         IWidoRouter _widoRouter,
@@ -38,9 +49,17 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         Collateral calldata finalCollateral,
         IWidoRouter.Step[] calldata route,
         uint256 feeBps,
-        address partner
+        address partner,
+        Signatures calldata sigs
     ) external {
-        bytes memory data = abi.encode(msg.sender, existingCollateral, route, feeBps, partner);
+        bytes memory data = abi.encode(
+            msg.sender,
+            existingCollateral,
+            route,
+            feeBps,
+            partner,
+            sigs
+        );
 
         // approve finalCollateral.amount+fee
 
@@ -61,16 +80,35 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
     ) external override returns (bytes32) {
         require(msg.sender == address(flashLoanProvider), "Caller is not Euler");
         (
-            address user,
-            Collateral memory existingCollateral,
-            IWidoRouter.Step[] memory route,
-            uint256 feeBps,
-            address partner
-        ) = abi.decode(data, (address, Collateral, IWidoRouter.Step[], uint256, address));
+        address user,
+        Collateral memory existingCollateral,
+        IWidoRouter.Step[] memory route,
+        uint256 feeBps,
+        address partner,
+        Signatures memory signatures
+        ) = abi.decode(
+            data,
+            (address, Collateral, IWidoRouter.Step[], uint256, address, Signatures)
+        );
 
-        // supply new collateral on behalf of user
-        IERC20(lentAsset).approve(address(comet), lentAmount);
-        comet.supplyTo(user, lentAsset, lentAmount);
+        {
+            // supply new collateral on behalf of user
+            IERC20(lentAsset).approve(address(comet), lentAmount);
+            comet.supplyTo(user, lentAsset, lentAmount);
+
+            uint256 nonce = comet.userNonce(user);
+
+            comet.allowBySig(
+                user,
+                address(this),
+                true,
+                nonce,
+                10e9,
+                signatures.allow.v,
+                signatures.allow.r,
+                signatures.allow.s
+            );
+        }
 
         // withdraw previous collateral (user must've approved)
         comet.withdrawFrom(user, address(this), existingCollateral.addr, existingCollateral.amount);
