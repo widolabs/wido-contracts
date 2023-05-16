@@ -16,6 +16,11 @@ contract WidoFlashLoan is IERC3156FlashBorrower {
     IWidoTokenManager public widoTokenManager;
     IComet public comet;
 
+    struct Collateral {
+        address addr;
+        uint256 amount;
+    }
+
     constructor(
         IERC3156FlashLender _flashLoanProvider,
         IWidoRouter _widoRouter,
@@ -29,20 +34,22 @@ contract WidoFlashLoan is IERC3156FlashBorrower {
     }
 
     function swapCollateral(
-        address finalCollateral,
-        uint256 finalCollateralAmount,
-        address initialCollateral,
-        uint256 initialCollateralAmount,
+        Collateral calldata existingCollateral,
+        Collateral calldata finalCollateral,
         IWidoRouter.Step[] calldata route,
         uint256 feeBps,
         address partner
     ) external {
-        bytes memory data = abi.encode(msg.sender, initialCollateral, initialCollateralAmount, route, feeBps, partner);
+        bytes memory data = abi.encode(msg.sender, existingCollateral, route, feeBps, partner);
 
         // approve finalCollateralAmount+fee
 
-
-        flashLoanProvider.flashLoan(IERC3156FlashBorrower(this), finalCollateral, finalCollateralAmount, data);
+        flashLoanProvider.flashLoan(
+            IERC3156FlashBorrower(this),
+            finalCollateral.addr,
+            finalCollateral.amount,
+            data
+        );
     }
 
     function onFlashLoan(
@@ -55,27 +62,26 @@ contract WidoFlashLoan is IERC3156FlashBorrower {
         require(msg.sender == address(flashLoanProvider), "Caller is not Euler");
         (
             address user,
-            address existingAsset,
-            uint256 existingAssetAmount,
+            Collateral memory existingCollateral,
             IWidoRouter.Step[] memory route,
             uint256 feeBps,
             address partner
-        ) = abi.decode(data, (address, address, uint256, IWidoRouter.Step[], uint256, address));
+        ) = abi.decode(data, (address, Collateral, IWidoRouter.Step[], uint256, address));
 
         // supply new collateral on behalf of user
         IERC20(lentAsset).approve(address(comet), lentAmount);
         comet.supplyTo(user, lentAsset, lentAmount);
 
         // withdraw previous collateral (user must've approved)
-        comet.withdrawFrom(user, address(this), existingAsset, existingAssetAmount);
+        comet.withdrawFrom(user, address(this), existingCollateral.addr, existingCollateral.amount);
 
         {
             // approve WidoTokenManager initial collateral to make the swap
-            IERC20(existingAsset).approve(address(widoTokenManager), existingAssetAmount);
+            IERC20(existingCollateral.addr).approve(address(widoTokenManager), existingCollateral.amount);
 
             // create Route
             IWidoRouter.OrderInput[] memory inputs = new IWidoRouter.OrderInput[](1);
-            inputs[0] = IWidoRouter.OrderInput(existingAsset, existingAssetAmount);
+            inputs[0] = IWidoRouter.OrderInput(existingCollateral.addr, existingCollateral.amount);
 
             IWidoRouter.OrderOutput[] memory outputs = new IWidoRouter.OrderOutput[](1);
             outputs[0] = IWidoRouter.OrderOutput(lentAsset, lentAmount);

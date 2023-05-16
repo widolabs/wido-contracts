@@ -24,10 +24,8 @@ contract WidoFlashLoanTest is Test {
 
     address user1 = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
 
-    address initialCollateral = WBTC;
-    uint256 initialAmount = 0.06e8;
-    address finalCollateral = WETH;
-    uint256 finalAmount = 1e18;
+    WidoFlashLoan.Collateral existingCollateral = WidoFlashLoan.Collateral(WBTC, 0.06e8);
+    WidoFlashLoan.Collateral finalCollateral = WidoFlashLoan.Collateral(WETH, 1e18);
 
     event SupplyCollateral(address indexed from, address indexed dst, address indexed asset, uint amount);
     event WithdrawCollateral(address indexed src, address indexed to, address indexed asset, uint amount);
@@ -41,15 +39,15 @@ contract WidoFlashLoanTest is Test {
         /** Arrange */
 
         // deal necessary amounts
-        deal(initialCollateral, user1, initialAmount);
-        deal(finalCollateral, address(mockSwap), finalAmount);
+        deal(existingCollateral.addr, user1, existingCollateral.amount);
+        deal(finalCollateral.addr, address(mockSwap), finalCollateral.amount);
 
         // start impersonating user
         vm.startPrank(user1);
 
         // deposit into Compound
-        IERC20(initialCollateral).approve(address(cometUsdc), initialAmount);
-        cometUsdc.supply(initialCollateral, initialAmount);
+        IERC20(existingCollateral.addr).approve(address(cometUsdc), existingCollateral.amount);
+        cometUsdc.supply(existingCollateral.addr, existingCollateral.amount);
 
         cometUsdc.withdraw(address(USDC), 1000e6);
 
@@ -62,11 +60,11 @@ contract WidoFlashLoanTest is Test {
         // generate route for WidoRoute
         IWidoRouter.Step[] memory route = new IWidoRouter.Step[](1);
         route[0].targetAddress = address(mockSwap);
-        route[0].fromToken = initialCollateral;
+        route[0].fromToken = existingCollateral.addr;
         route[0].data = abi.encodeWithSignature(
             "swapWbtcToWeth(uint256,uint256,address)",
-            initialAmount,
-            finalAmount,
+            existingCollateral.amount,
+            finalCollateral.amount,
             address(widoRouter)
         );
         route[0].amountIndex = - 1;
@@ -82,10 +80,8 @@ contract WidoFlashLoanTest is Test {
         /** Act */
 
         widoFlashLoan.swapCollateral(
+            existingCollateral,
             finalCollateral,
-            finalAmount,
-            initialCollateral,
-            initialAmount,
             route,
             0,
             address(0)
@@ -94,10 +90,10 @@ contract WidoFlashLoanTest is Test {
         /** Assert */
 
         // user doesn't have initial collateral
-        assertEq(userCollateral(user1, initialCollateral), 0);
+        assertEq(userCollateral(user1, existingCollateral.addr), 0);
 
         // user has final collateral deposited
-        assertEq(userCollateral(user1, finalCollateral), finalAmount);
+        assertEq(userCollateral(user1, finalCollateral.addr), finalCollateral.amount);
 
         // loan is still collateralized
         assertTrue(cometUsdc.isBorrowCollateralized(user1));
