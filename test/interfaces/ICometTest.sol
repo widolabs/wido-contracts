@@ -35,4 +35,5 @@ interface ICometTest {
 
     function isBorrowCollateralized(address user) external returns (bool);
 
+    function isAllowed(address owner, address manager) external returns (bool);
 }

@@ -25,14 +25,22 @@ contract WidoCollateralSwapTest is ForkTest {
     event WithdrawCollateral(address indexed src, address indexed to, address indexed asset, uint amount);
 
     function setUp() public {
-        widoCollateralSwap = new WidoCollateralSwap(flashLoanProvider, widoRouter, widoTokenManager, IComet(address(cometUsdc)));
-        mockSwap = new MockSwap(ERC20(WETH), ERC20(WBTC));
+        widoCollateralSwap = new WidoCollateralSwap(
+            flashLoanProvider,
+            widoRouter,
+            widoTokenManager,
+            IComet(address(cometUsdc))
+        );
+        mockSwap = new MockSwap(
+            ERC20(WETH),
+            ERC20(WBTC)
+        );
     }
 
     function test_itWorks() public {
         /** Arrange */
 
-        // deal necessary amounts
+        // deal necessary token amounts
         deal(existingCollateral.addr, user1, existingCollateral.amount);
         deal(finalCollateral.addr, address(mockSwap), finalCollateral.amount);
 
@@ -69,7 +77,6 @@ contract WidoCollateralSwapTest is ForkTest {
         vm.expectEmit(true, true, false, false);
         emit WithdrawCollateral(user1, address(widoCollateralSwap), address(0), 0);
 
-
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
         WidoCollateralSwap.Signature memory allowSignature = sign(
@@ -99,9 +106,6 @@ contract WidoCollateralSwapTest is ForkTest {
             revokeSignature
         );
 
-        // test allow is negative
-        // TODO
-
         /** Act */
 
         widoCollateralSwap.swapCollateral(
@@ -116,7 +120,7 @@ contract WidoCollateralSwapTest is ForkTest {
         /** Assert */
 
         // test allow is negative
-        // TODO
+        assertFalse(cometUsdc.isAllowed(user1, address(widoCollateralSwap)), "Manager still allowed");
 
         // user doesn't have initial collateral
         assertEq(userCollateral(user1, existingCollateral.addr), 0);

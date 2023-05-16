@@ -11,6 +11,7 @@ import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract WidoCollateralSwap is IERC3156FlashBorrower {
     using SafeMath for uint256;
+
     IERC3156FlashLender public flashLoanProvider;
     IWidoRouter public widoRouter;
     IWidoTokenManager public widoTokenManager;
@@ -91,27 +92,12 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
             (address, Collateral, IWidoRouter.Step[], uint256, address, Signatures)
         );
 
-        {
-            // supply new collateral on behalf of user
-            IERC20(lentAsset).approve(address(comet), lentAmount);
-            comet.supplyTo(user, lentAsset, lentAmount);
+        // supply new collateral on behalf of user
+        IERC20(lentAsset).approve(address(comet), lentAmount);
+        comet.supplyTo(user, lentAsset, lentAmount);
 
-            uint256 nonce = comet.userNonce(user);
-
-            comet.allowBySig(
-                user,
-                address(this),
-                true,
-                nonce,
-                10e9,
-                signatures.allow.v,
-                signatures.allow.r,
-                signatures.allow.s
-            );
-        }
-
-        // withdraw previous collateral (user must've approved)
-        comet.withdrawFrom(user, address(this), existingCollateral.addr, existingCollateral.amount);
+        // withdraw existing collateral
+        _withdrawFrom(user, existingCollateral, signatures);
 
         {
             // approve WidoTokenManager initial collateral to make the swap
@@ -138,4 +124,46 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
 
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
     }
+
+    /// @dev This function withdraws the collateral from the user.
+    ///  It requires two consecutive EIP712 signatures to allow and revoke
+    ///  permissions to and from this contract.
+    function _withdrawFrom(
+        address user,
+        Collateral memory collateral,
+        Signatures memory sigs
+    ) internal {
+        // get current nonce
+        uint256 nonce = comet.userNonce(user);
+        // allow the contract
+        _allowBySig(user, true, nonce, sigs.allow);
+        // withdraw assets
+        comet.withdrawFrom(user, address(this), collateral.addr, collateral.amount);
+        // increment nonce
+    unchecked {
+        nonce++;
+    }
+        // revoke permission
+        _allowBySig(user, false, nonce, sigs.revoke);
+    }
+
+    /// @dev Executes a single `allowBySig` operation on the Comet contract
+    function _allowBySig(
+        address user,
+        bool allowed,
+        uint256 nonce,
+        Signature memory sig
+    ) internal {
+        comet.allowBySig(
+            user,
+            address(this),
+            allowed,
+            nonce,
+            10e9,
+            sig.v,
+            sig.r,
+            sig.s
+        );
+    }
+
 }
