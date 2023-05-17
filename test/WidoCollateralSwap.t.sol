@@ -27,8 +27,6 @@ contract WidoCollateralSwapTest is ForkTest {
     function setUp() public {
         widoCollateralSwap = new WidoCollateralSwap(
             flashLoanProvider,
-            widoRouter,
-            widoTokenManager,
             IComet(address(cometUsdc))
         );
         mockSwap = new MockSwap(
@@ -56,18 +54,6 @@ contract WidoCollateralSwapTest is ForkTest {
 
         // track the initial principal
         int104 initialPrincipal = userPrincipal(user1);
-
-        // generate route for WidoRoute
-        IWidoRouter.Step[] memory route = new IWidoRouter.Step[](1);
-        route[0].targetAddress = address(mockSwap);
-        route[0].fromToken = existingCollateral.addr;
-        route[0].data = abi.encodeWithSignature(
-            "swapWbtcToWeth(uint256,uint256,address)",
-            existingCollateral.amount,
-            finalCollateral.amount,
-            address(widoRouter)
-        );
-        route[0].amountIndex = - 1;
 
         // define expected Event
         vm.expectEmit(true, true, false, false);
@@ -106,15 +92,17 @@ contract WidoCollateralSwapTest is ForkTest {
             revokeSignature
         );
 
+        bytes memory widoRouterCalldata = generateWidoRouterCalldata(existingCollateral, finalCollateral);
+
         /** Act */
 
         widoCollateralSwap.swapCollateral(
             existingCollateral,
             finalCollateral,
-            route,
-            0,
-            address(0),
-            sigs
+            sigs,
+            address(widoRouter),
+            address(widoTokenManager),
+            widoRouterCalldata
         );
 
         /** Assert */
@@ -178,5 +166,37 @@ contract WidoCollateralSwapTest is ForkTest {
     function userCollateral(address user, address asset) internal returns (uint128) {
         ICometTest.UserCollateral memory _userCollateral = cometUsdc.userCollateral(user, asset);
         return _userCollateral.balance;
+    }
+
+    function generateWidoRouterCalldata(
+        WidoCollateralSwap.Collateral memory _existingCollateral,
+        WidoCollateralSwap.Collateral memory _finalCollateral
+    ) internal view returns (bytes memory) {
+        IWidoRouter.OrderInput[] memory inputs = new IWidoRouter.OrderInput[](1);
+        inputs[0] = IWidoRouter.OrderInput(_existingCollateral.addr, _existingCollateral.amount);
+
+        IWidoRouter.OrderOutput[] memory outputs = new IWidoRouter.OrderOutput[](1);
+        outputs[0] = IWidoRouter.OrderOutput(_finalCollateral.addr, _finalCollateral.amount);
+
+        IWidoRouter.Order memory order = IWidoRouter.Order(inputs, outputs, address(widoCollateralSwap), 0, 0);
+
+        IWidoRouter.Step[] memory steps = new IWidoRouter.Step[](1);
+        steps[0].targetAddress = address(mockSwap);
+        steps[0].fromToken = _existingCollateral.addr;
+        steps[0].data = abi.encodeWithSignature(
+            "swapWbtcToWeth(uint256,uint256,address)",
+            _existingCollateral.amount,
+            _finalCollateral.amount,
+            address(widoRouter)
+        );
+        steps[0].amountIndex = - 1;
+
+        return abi.encodeWithSelector(
+            0x916a3bd9, // "executeOrder(Order,Step[],uint256,address)",
+            order,
+            steps,
+            0,
+            address(0)
+        );
     }
 }

@@ -13,8 +13,6 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
     using SafeMath for uint256;
 
     IERC3156FlashLender public flashLoanProvider;
-    IWidoRouter public widoRouter;
-    IWidoTokenManager public widoTokenManager;
     IComet public comet;
 
     struct Collateral {
@@ -35,31 +33,27 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
 
     constructor(
         IERC3156FlashLender _flashLoanProvider,
-        IWidoRouter _widoRouter,
-        IWidoTokenManager _widoTokenManager,
         IComet _comet
     ) {
         flashLoanProvider = _flashLoanProvider;
-        widoRouter = _widoRouter;
-        widoTokenManager = _widoTokenManager;
         comet = _comet;
     }
 
     function swapCollateral(
         Collateral calldata existingCollateral,
         Collateral calldata finalCollateral,
-        IWidoRouter.Step[] calldata route,
-        uint256 feeBps,
-        address partner,
-        Signatures calldata sigs
+        Signatures calldata sigs,
+        address widoRouter,
+        address widoTokenManager,
+        bytes calldata widoRouterCalldata
     ) external {
         bytes memory data = abi.encode(
             msg.sender,
             existingCollateral,
-            route,
-            feeBps,
-            partner,
-            sigs
+            sigs,
+            widoRouter,
+            widoTokenManager,
+            widoRouterCalldata
         );
 
         // approve finalCollateral.amount+fee
@@ -83,13 +77,13 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         (
         address user,
         Collateral memory existingCollateral,
-        IWidoRouter.Step[] memory route,
-        uint256 feeBps,
-        address partner,
-        Signatures memory signatures
+        Signatures memory signatures,
+        address widoRouter,
+        address widoTokenManager,
+        bytes memory widoRouterCalldata
         ) = abi.decode(
             data,
-            (address, Collateral, IWidoRouter.Step[], uint256, address, Signatures)
+            (address, Collateral, Signatures, address, address, bytes)
         );
 
         // supply new collateral on behalf of user
@@ -101,19 +95,21 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
 
         {
             // approve WidoTokenManager initial collateral to make the swap
-            IERC20(existingCollateral.addr).approve(address(widoTokenManager), existingCollateral.amount);
-
-            // create Route
-            IWidoRouter.OrderInput[] memory inputs = new IWidoRouter.OrderInput[](1);
-            inputs[0] = IWidoRouter.OrderInput(existingCollateral.addr, existingCollateral.amount);
-
-            IWidoRouter.OrderOutput[] memory outputs = new IWidoRouter.OrderOutput[](1);
-            outputs[0] = IWidoRouter.OrderOutput(lentAsset, lentAmount);
-
-            IWidoRouter.Order memory order = IWidoRouter.Order(inputs, outputs, address(this), 0, 0);
+            IERC20(existingCollateral.addr).approve(
+                address(widoTokenManager),
+                existingCollateral.amount
+            );
 
             // execute swap
-            widoRouter.executeOrder(order, route, feeBps, partner);
+            (bool success, bytes memory result) = widoRouter.call(widoRouterCalldata);
+
+            if (!success) {
+                if (result.length < 68) revert("WidoRouter failed");
+                assembly {
+                    result := add(result, 0x04)
+                }
+                revert(abi.decode(result, (string)));
+            }
         }
 
         // approve loan provider to pull lent amount + fee
@@ -140,9 +136,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         // withdraw assets
         comet.withdrawFrom(user, address(this), collateral.addr, collateral.amount);
         // increment nonce
-    unchecked {
-        nonce++;
-    }
+        unchecked {nonce++;}
         // revoke permission
         _allowBySig(user, false, nonce, sigs.revoke);
     }
