@@ -13,6 +13,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
     using SafeMath for uint256;
 
     IERC3156FlashLender public flashLoanProvider;
+    bytes32 internal constant ON_FLASH_LOAN_RESPONSE = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     struct Collateral {
         address addr;
@@ -49,10 +50,10 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
     ) external {
         bytes memory data = abi.encode(
             msg.sender,
+            comet,
             existingCollateral,
             sigs,
-            swap,
-            comet
+            swap
         );
 
         flashLoanProvider.flashLoan(
@@ -73,13 +74,13 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         require(msg.sender == address(flashLoanProvider), "Caller is not Euler");
         (
         address user,
+        IComet comet,
         Collateral memory existingCollateral,
         Signatures memory signatures,
-        WidoSwap memory swap,
-        IComet comet
+        WidoSwap memory swap
         ) = abi.decode(
             data,
-            (address, Collateral, Signatures, WidoSwap, IComet)
+            (address, IComet, Collateral, Signatures, WidoSwap)
         );
 
         // supply new collateral on behalf of user
@@ -98,6 +99,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
                 existingCollateral.amount
             );
 
+            // execute swap
             (bool success, bytes memory result) = swap.router.call(swap.callData);
 
             if (!success) {
@@ -123,7 +125,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
             borrowedAmount.add(fee)
         );
 
-        return keccak256("ERC3156FlashBorrower.onFlashLoan");
+        return ON_FLASH_LOAN_RESPONSE;
     }
 
     /// @dev Supplies collateral on behalf of user
