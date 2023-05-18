@@ -26,8 +26,7 @@ contract WidoCollateralSwapTest is ForkTest {
 
     function setUp() public {
         widoCollateralSwap = new WidoCollateralSwap(
-            flashLoanProvider,
-            IComet(address(cometUsdc))
+            flashLoanProvider
         );
         mockSwap = new MockSwap(
             ERC20(WETH),
@@ -94,15 +93,20 @@ contract WidoCollateralSwapTest is ForkTest {
 
         bytes memory widoRouterCalldata = generateWidoRouterCalldata(existingCollateral, finalCollateral);
 
+        WidoCollateralSwap.WidoSwap memory swap = WidoCollateralSwap.WidoSwap(
+            address(widoRouter),
+            address(widoTokenManager),
+            widoRouterCalldata
+        );
+
         /** Act */
 
         widoCollateralSwap.swapCollateral(
             existingCollateral,
             finalCollateral,
             sigs,
-            address(widoRouter),
-            address(widoTokenManager),
-            widoRouterCalldata
+            swap,
+            address(cometUsdc)
         );
 
         /** Assert */

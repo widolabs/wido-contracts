@@ -13,7 +13,6 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
     using SafeMath for uint256;
 
     IERC3156FlashLender public flashLoanProvider;
-    IComet public comet;
 
     struct Collateral {
         address addr;
@@ -31,32 +30,30 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         bytes32 s;
     }
 
-    constructor(
-        IERC3156FlashLender _flashLoanProvider,
-        IComet _comet
-    ) {
+    struct WidoSwap {
+        address router;
+        address tokenManager;
+        bytes callData;
+    }
+
+    constructor(IERC3156FlashLender _flashLoanProvider) {
         flashLoanProvider = _flashLoanProvider;
-        comet = _comet;
     }
 
     function swapCollateral(
         Collateral calldata existingCollateral,
         Collateral calldata finalCollateral,
         Signatures calldata sigs,
-        address widoRouter,
-        address widoTokenManager,
-        bytes calldata widoRouterCalldata
+        WidoSwap calldata swap,
+        address comet
     ) external {
         bytes memory data = abi.encode(
             msg.sender,
             existingCollateral,
             sigs,
-            widoRouter,
-            widoTokenManager,
-            widoRouterCalldata
+            swap,
+            comet
         );
-
-        // approve finalCollateral.amount+fee
 
         flashLoanProvider.flashLoan(
             IERC3156FlashBorrower(this),
@@ -78,12 +75,11 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         address user,
         Collateral memory existingCollateral,
         Signatures memory signatures,
-        address widoRouter,
-        address widoTokenManager,
-        bytes memory widoRouterCalldata
+        WidoSwap memory swap,
+        IComet comet
         ) = abi.decode(
             data,
-            (address, Collateral, Signatures, address, address, bytes)
+            (address, Collateral, Signatures, WidoSwap, IComet)
         );
 
         // supply new collateral on behalf of user
@@ -91,17 +87,17 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         comet.supplyTo(user, lentAsset, lentAmount);
 
         // withdraw existing collateral
-        _withdrawFrom(user, existingCollateral, signatures);
+        _withdrawFrom(comet, user, existingCollateral, signatures);
 
         {
             // approve WidoTokenManager initial collateral to make the swap
             IERC20(existingCollateral.addr).approve(
-                address(widoTokenManager),
+                swap.tokenManager,
                 existingCollateral.amount
             );
 
             // execute swap
-            (bool success, bytes memory result) = widoRouter.call(widoRouterCalldata);
+            (bool success, bytes memory result) = swap.router.call(swap.callData);
 
             if (!success) {
                 if (result.length < 68) revert("WidoRouter failed");
@@ -125,6 +121,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
     ///  It requires two consecutive EIP712 signatures to allow and revoke
     ///  permissions to and from this contract.
     function _withdrawFrom(
+        IComet comet,
         address user,
         Collateral memory collateral,
         Signatures memory sigs
@@ -132,17 +129,18 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         // get current nonce
         uint256 nonce = comet.userNonce(user);
         // allow the contract
-        _allowBySig(user, true, nonce, sigs.allow);
+        _allowBySig(comet, user, true, nonce, sigs.allow);
         // withdraw assets
         comet.withdrawFrom(user, address(this), collateral.addr, collateral.amount);
         // increment nonce
         unchecked {nonce++;}
         // revoke permission
-        _allowBySig(user, false, nonce, sigs.revoke);
+        _allowBySig(comet, user, false, nonce, sigs.revoke);
     }
 
     /// @dev Executes a single `allowBySig` operation on the Comet contract
     function _allowBySig(
+        IComet comet,
         address user,
         bool allowed,
         uint256 nonce,
