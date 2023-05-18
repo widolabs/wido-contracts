@@ -65,8 +65,8 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
 
     function onFlashLoan(
         address /* initiator */,
-        address lentAsset,
-        uint256 lentAmount,
+        address borrowedAsset,
+        uint256 borrowedAmount,
         uint256 fee,
         bytes calldata data
     ) external override returns (bytes32) {
@@ -83,11 +83,13 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         );
 
         // supply new collateral on behalf of user
-        IERC20(lentAsset).approve(address(comet), lentAmount);
-        comet.supplyTo(user, lentAsset, lentAmount);
+        _supplyTo(comet, user, borrowedAsset, borrowedAmount);
 
         // withdraw existing collateral
         _withdrawFrom(comet, user, existingCollateral, signatures);
+
+        // store amount of final collateral before swap
+        uint256 surplusAmount = IERC20(borrowedAsset).balanceOf(address(this));
 
         {
             // approve WidoTokenManager initial collateral to make the swap
@@ -96,7 +98,6 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
                 existingCollateral.amount
             );
 
-            // execute swap
             (bool success, bytes memory result) = swap.router.call(swap.callData);
 
             if (!success) {
@@ -108,13 +109,32 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
             }
         }
 
+        // check amount of final collateral after swap
+        surplusAmount = IERC20(borrowedAsset).balanceOf(address(this)) - borrowedAmount;
+
+        // if positive slippage, supply extra to user
+        if (surplusAmount > 0) {
+            _supplyTo(comet, user, borrowedAsset, surplusAmount);
+        }
+
         // approve loan provider to pull lent amount + fee
-        IERC20(lentAsset).approve(
+        IERC20(borrowedAsset).approve(
             address(flashLoanProvider),
-            lentAmount.add(fee)
+            borrowedAmount.add(fee)
         );
 
         return keccak256("ERC3156FlashBorrower.onFlashLoan");
+    }
+
+    /// @dev Supplies collateral on behalf of user
+    function _supplyTo(
+        IComet comet,
+        address user,
+        address asset,
+        uint256 amount
+    ) internal {
+        IERC20(asset).approve(address(comet), amount);
+        comet.supplyTo(user, asset, amount);
     }
 
     /// @dev This function withdraws the collateral from the user.

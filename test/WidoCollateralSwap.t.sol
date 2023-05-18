@@ -115,17 +115,17 @@ contract WidoCollateralSwapTest is ForkTest {
         assertFalse(cometUsdc.isAllowed(user1, address(widoCollateralSwap)), "Manager still allowed");
 
         // user doesn't have initial collateral
-        assertEq(userCollateral(user1, existingCollateral.addr), 0);
+        assertEq(userCollateral(user1, existingCollateral.addr), 0, "Initial collateral not zero");
 
         // user has final collateral deposited
-        assertEq(userCollateral(user1, finalCollateral.addr), finalCollateral.amount);
+        assertEq(userCollateral(user1, finalCollateral.addr), finalCollateral.amount, "Final collateral not deposited");
 
         // loan is still collateralized
-        assertTrue(cometUsdc.isBorrowCollateralized(user1));
+        assertTrue(cometUsdc.isBorrowCollateralized(user1), "Position not collateralized");
 
         // principal of user has not changed
         int104 finalPrincipal = userPrincipal(user1);
-        assertEq(initialPrincipal, finalPrincipal);
+        assertEq(initialPrincipal, finalPrincipal, "Principal has changed");
     }
 
     /// @dev Generates the signature values for the `allowBySig` function
