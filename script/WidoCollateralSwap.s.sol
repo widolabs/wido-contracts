@@ -11,9 +11,9 @@ contract WidoFlashLoanScript is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
-        //WidoFlashLoan wfl = new WidoFlashLoan(
-        //// TODO
-        //);
+        WidoCollateralSwap wfl = new WidoCollateralSwap(
+            IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321) // Equalizer
+        );
 
         vm.stopBroadcast();
     }
