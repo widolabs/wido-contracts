@@ -18,6 +18,10 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
     /// @dev The typehash for the ERC-3156 `onFlashLoan` return
     bytes32 internal constant ON_FLASH_LOAN_RESPONSE = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
+    error InvalidProvider();
+    error FeeUnsupported();
+    error WidoRouterFailed();
+
     struct Collateral {
         address addr;
         uint256 amount;
@@ -82,8 +86,12 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         uint256 fee,
         bytes calldata data
     ) external override returns (bytes32) {
-        require(msg.sender == address(flashLoanProvider), "Caller is not accepted provider");
-        require(fee == 0, "Fee payment not supported yet");
+        if (msg.sender != address(flashLoanProvider)) {
+            revert InvalidProvider();
+        }
+        if (fee != 0) {
+            revert FeeUnsupported();
+        }
 
         (
         address user,
@@ -137,7 +145,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         (bool success, bytes memory result) = swap.router.call(swap.callData);
 
         if (!success) {
-            if (result.length < 68) revert("WidoRouter failed");
+            if (result.length < 68) revert WidoRouterFailed();
             assembly {
                 result := add(result, 0x04)
             }
