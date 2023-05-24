@@ -32,12 +32,24 @@ contract WidoCollateralSwapTest is ForkTest {
             ERC20(WETH),
             ERC20(WBTC)
         );
+
+        // deal necessary token amounts
+        deal(existingCollateral.addr, user1, existingCollateral.amount);
+        deal(finalCollateral.addr, address(mockSwap), finalCollateral.amount.mul(2));
+
+        // start impersonating user
+        vm.startPrank(user1);
+
+        // deposit into Compound
+        IERC20(existingCollateral.addr).approve(address(cometUsdc), existingCollateral.amount);
+        cometUsdc.supply(existingCollateral.addr, existingCollateral.amount);
+
+        // take a loan
+        cometUsdc.withdraw(address(USDC), 1000e6);
     }
 
     function test_itWorks_WhenAmountIsTheExpected() public {
         /** Arrange */
-
-        _setupLoanScenario();
 
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
@@ -111,8 +123,6 @@ contract WidoCollateralSwapTest is ForkTest {
 
     function test_itWorks_WhenPositiveSlippage() public {
         /** Arrange */
-
-        _setupLoanScenario();
 
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
@@ -190,8 +200,6 @@ contract WidoCollateralSwapTest is ForkTest {
     function test_revertIf_NegativeSlippage() public {
         /** Arrange */
 
-        _setupLoanScenario();
-
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
         WidoCollateralSwap.Signature memory allowSignature = _sign(
@@ -243,8 +251,6 @@ contract WidoCollateralSwapTest is ForkTest {
     function test_revertWhen_AllowSignatureHasWrongManager() public {
         /** Arrange */
 
-        _setupLoanScenario();
-
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
         WidoCollateralSwap.Signature memory allowSignature = _sign(
@@ -292,8 +298,6 @@ contract WidoCollateralSwapTest is ForkTest {
 
     function test_revertWhen_AllowSignatureHasWrongExpiry() public {
         /** Arrange */
-
-        _setupLoanScenario();
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
@@ -343,8 +347,6 @@ contract WidoCollateralSwapTest is ForkTest {
     function test_revertWhen_SignaturesAreNotConsecutive() public {
         /** Arrange */
 
-        _setupLoanScenario();
-
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
         WidoCollateralSwap.Signature memory allowSignature = _sign(
@@ -392,8 +394,6 @@ contract WidoCollateralSwapTest is ForkTest {
 
     function test_revertWhen_RevokeSignatureHasWrongManager() public {
         /** Arrange */
-
-        _setupLoanScenario();
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
@@ -518,22 +518,5 @@ contract WidoCollateralSwapTest is ForkTest {
             0,
             address(0)
         );
-    }
-
-    /// @dev Sets everything up so the user has a valid Compound position and a loan
-    function _setupLoanScenario() internal {
-        // deal necessary token amounts
-        deal(existingCollateral.addr, user1, existingCollateral.amount);
-        deal(finalCollateral.addr, address(mockSwap), finalCollateral.amount.mul(2));
-
-        // start impersonating user
-        vm.startPrank(user1);
-
-        // deposit into Compound
-        IERC20(existingCollateral.addr).approve(address(cometUsdc), existingCollateral.amount);
-        cometUsdc.supply(existingCollateral.addr, existingCollateral.amount);
-
-        // take a loan
-        cometUsdc.withdraw(address(USDC), 1000e6);
     }
 }
