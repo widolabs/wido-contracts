@@ -34,25 +34,13 @@ contract WidoCollateralSwapTest is ForkTest {
         );
     }
 
-    function test_itWorks() public {
+    function test_itWorks_WhenAmountIsTheExpected() public {
         /** Arrange */
 
-        // deal necessary token amounts
-        deal(existingCollateral.addr, user1, existingCollateral.amount);
-        deal(finalCollateral.addr, address(mockSwap), finalCollateral.amount);
-
-        // start impersonating user
-        vm.startPrank(user1);
-
-        // deposit into Compound
-        IERC20(existingCollateral.addr).approve(address(cometUsdc), existingCollateral.amount);
-        cometUsdc.supply(existingCollateral.addr, existingCollateral.amount);
-
-        // take a loan
-        cometUsdc.withdraw(address(USDC), 1000e6);
+        _setupLoanScenario();
 
         // track the initial principal
-        int104 initialPrincipal = userPrincipal(user1);
+        int104 initialPrincipal = _userPrincipal(user1);
 
         // define expected Event
         vm.expectEmit(true, true, false, false);
@@ -64,7 +52,7 @@ contract WidoCollateralSwapTest is ForkTest {
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
-        WidoCollateralSwap.Signature memory allowSignature = sign(
+        WidoCollateralSwap.Signature memory allowSignature = _sign(
             user1,
             address(widoCollateralSwap),
             true,
@@ -75,12 +63,11 @@ contract WidoCollateralSwapTest is ForkTest {
         );
 
         // generate revoke signature
-        nonce = nonce.add(1);
-        WidoCollateralSwap.Signature memory revokeSignature = sign(
+        WidoCollateralSwap.Signature memory revokeSignature = _sign(
             user1,
             address(widoCollateralSwap),
             false,
-            nonce,
+            nonce.add(1),
             10e9,
             cometUsdc.name(),
             cometUsdc.version()
@@ -91,12 +78,10 @@ contract WidoCollateralSwapTest is ForkTest {
             revokeSignature
         );
 
-        bytes memory widoRouterCalldata = generateWidoRouterCalldata(existingCollateral, finalCollateral);
-
         WidoCollateralSwap.WidoSwap memory swap = WidoCollateralSwap.WidoSwap(
             address(widoRouter),
             address(widoTokenManager),
-            widoRouterCalldata
+            _generateWidoRouterCalldata(existingCollateral, finalCollateral)
         );
 
         /** Act */
@@ -115,21 +100,239 @@ contract WidoCollateralSwapTest is ForkTest {
         assertFalse(cometUsdc.isAllowed(user1, address(widoCollateralSwap)), "Manager still allowed");
 
         // user doesn't have initial collateral
-        assertEq(userCollateral(user1, existingCollateral.addr), 0, "Initial collateral not zero");
+        assertEq(_userCollateral(user1, existingCollateral.addr), 0, "Initial collateral not zero");
 
         // user has final collateral deposited
-        assertEq(userCollateral(user1, finalCollateral.addr), finalCollateral.amount, "Final collateral not deposited");
+        assertEq(_userCollateral(user1, finalCollateral.addr), finalCollateral.amount, "Final collateral not deposited");
 
         // loan is still collateralized
         assertTrue(cometUsdc.isBorrowCollateralized(user1), "Position not collateralized");
 
         // principal of user has not changed
-        int104 finalPrincipal = userPrincipal(user1);
+        int104 finalPrincipal = _userPrincipal(user1);
         assertEq(initialPrincipal, finalPrincipal, "Principal has changed");
     }
 
+    function test_revertWhen_AllowSignatureHasWrongManager() public {
+        /** Arrange */
+
+        _setupLoanScenario();
+
+        // generate allow signature
+        uint256 nonce = cometUsdc.userNonce(user1);
+        WidoCollateralSwap.Signature memory allowSignature = _sign(
+            user1,
+            address(0),
+            true,
+            nonce,
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        // generate revoke signature
+        WidoCollateralSwap.Signature memory revokeSignature = _sign(
+            user1,
+            address(widoCollateralSwap),
+            false,
+            nonce.add(1),
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        WidoCollateralSwap.Signatures memory sigs = WidoCollateralSwap.Signatures(
+            allowSignature,
+            revokeSignature
+        );
+
+        WidoCollateralSwap.WidoSwap memory swap = WidoCollateralSwap.WidoSwap(
+            address(widoRouter),
+            address(widoTokenManager),
+            _generateWidoRouterCalldata(existingCollateral, finalCollateral)
+        );
+
+        /** Assert */
+
+        vm.expectRevert(bytes4(0x40622f2c));
+
+        /** Act */
+
+        widoCollateralSwap.swapCollateral(
+            existingCollateral,
+            finalCollateral,
+            sigs,
+            swap,
+            address(cometUsdc)
+        );
+    }
+
+    function test_revertWhen_AllowSignatureHasWrongExpiry() public {
+        /** Arrange */
+
+        _setupLoanScenario();
+
+        // generate allow signature
+        uint256 nonce = cometUsdc.userNonce(user1);
+        WidoCollateralSwap.Signature memory allowSignature = _sign(
+            user1,
+            address(widoCollateralSwap),
+            true,
+            nonce,
+            9e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        // generate revoke signature
+        WidoCollateralSwap.Signature memory revokeSignature = _sign(
+            user1,
+            address(widoCollateralSwap),
+            false,
+            nonce.add(1),
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        WidoCollateralSwap.Signatures memory sigs = WidoCollateralSwap.Signatures(
+            allowSignature,
+            revokeSignature
+        );
+
+        WidoCollateralSwap.WidoSwap memory swap = WidoCollateralSwap.WidoSwap(
+            address(widoRouter),
+            address(widoTokenManager),
+            _generateWidoRouterCalldata(existingCollateral, finalCollateral)
+        );
+
+        /** Assert */
+
+        vm.expectRevert(bytes4(0x40622f2c));
+
+        /** Act */
+
+        widoCollateralSwap.swapCollateral(
+            existingCollateral,
+            finalCollateral,
+            sigs,
+            swap,
+            address(cometUsdc)
+        );
+    }
+
+    function test_revertWhen_SignaturesAreNotConsecutive() public {
+        /** Arrange */
+
+        _setupLoanScenario();
+
+        // generate allow signature
+        uint256 nonce = cometUsdc.userNonce(user1);
+        WidoCollateralSwap.Signature memory allowSignature = _sign(
+            user1,
+            address(widoCollateralSwap),
+            true,
+            nonce,
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        // generate revoke signature
+        WidoCollateralSwap.Signature memory revokeSignature = _sign(
+            user1,
+            address(widoCollateralSwap),
+            false,
+            nonce, // <-- NOT BEING INCREMENTED
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        WidoCollateralSwap.Signatures memory sigs = WidoCollateralSwap.Signatures(
+            allowSignature,
+            revokeSignature
+        );
+
+        WidoCollateralSwap.WidoSwap memory swap = WidoCollateralSwap.WidoSwap(
+            address(widoRouter),
+            address(widoTokenManager),
+            _generateWidoRouterCalldata(existingCollateral, finalCollateral)
+        );
+
+        /** Assert */
+
+        vm.expectRevert(bytes4(0x40622f2c));
+
+        /** Act */
+
+        widoCollateralSwap.swapCollateral(
+            existingCollateral,
+            finalCollateral,
+            sigs,
+            swap,
+            address(cometUsdc)
+        );
+    }
+
+    function test_revertWhen_RevokeSignatureHasWrongManager() public {
+        /** Arrange */
+
+        _setupLoanScenario();
+
+        // generate allow signature
+        uint256 nonce = cometUsdc.userNonce(user1);
+        WidoCollateralSwap.Signature memory allowSignature = _sign(
+            user1,
+            address(widoCollateralSwap),
+            true,
+            nonce,
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        // generate revoke signature
+        WidoCollateralSwap.Signature memory revokeSignature = _sign(
+            user1,
+            address(0),
+            false,
+            nonce.add(1),
+            10e9,
+            cometUsdc.name(),
+            cometUsdc.version()
+        );
+
+        WidoCollateralSwap.Signatures memory sigs = WidoCollateralSwap.Signatures(
+            allowSignature,
+            revokeSignature
+        );
+
+        WidoCollateralSwap.WidoSwap memory swap = WidoCollateralSwap.WidoSwap(
+            address(widoRouter),
+            address(widoTokenManager),
+            _generateWidoRouterCalldata(existingCollateral, finalCollateral)
+        );
+
+        /** Assert */
+
+        vm.expectRevert(bytes4(0x40622f2c));
+
+        /** Act */
+
+        widoCollateralSwap.swapCollateral(
+            existingCollateral,
+            finalCollateral,
+            sigs,
+            swap,
+            address(cometUsdc)
+        );
+    }
+
+    /// Helpers
+
     /// @dev Generates the signature values for the `allowBySig` function
-    function sign(
+    function _sign(
         address owner,
         address manager,
         bool isAllowed,
@@ -162,17 +365,20 @@ contract WidoCollateralSwapTest is ForkTest {
         return WidoCollateralSwap.Signature(v, r, s);
     }
 
-    function userPrincipal(address user) internal returns (int104) {
-        ICometTest.UserBasic memory _userBasic = cometUsdc.userBasic(user);
-        return _userBasic.principal;
+    /// @dev Return the principal amount of the user
+    function _userPrincipal(address user) internal returns (int104) {
+        ICometTest.UserBasic memory userBasic = cometUsdc.userBasic(user);
+        return userBasic.principal;
     }
 
-    function userCollateral(address user, address asset) internal returns (uint128) {
-        ICometTest.UserCollateral memory _userCollateral = cometUsdc.userCollateral(user, asset);
-        return _userCollateral.balance;
+    /// @dev Return the collateral amount of the user
+    function _userCollateral(address user, address asset) internal returns (uint128) {
+        ICometTest.UserCollateral memory userCollateral = cometUsdc.userCollateral(user, asset);
+        return userCollateral.balance;
     }
 
-    function generateWidoRouterCalldata(
+    /// @dev Generate a calldata for the WidoRouter
+    function _generateWidoRouterCalldata(
         WidoCollateralSwap.Collateral memory _existingCollateral,
         WidoCollateralSwap.Collateral memory _finalCollateral
     ) internal view returns (bytes memory) {
@@ -202,5 +408,22 @@ contract WidoCollateralSwapTest is ForkTest {
             0,
             address(0)
         );
+    }
+
+    /// @dev Sets everything up so the user has a valid Compound position and a loan
+    function _setupLoanScenario() internal {
+        // deal necessary token amounts
+        deal(existingCollateral.addr, user1, existingCollateral.amount);
+        deal(finalCollateral.addr, address(mockSwap), finalCollateral.amount);
+
+        // start impersonating user
+        vm.startPrank(user1);
+
+        // deposit into Compound
+        IERC20(existingCollateral.addr).approve(address(cometUsdc), existingCollateral.amount);
+        cometUsdc.supply(existingCollateral.addr, existingCollateral.amount);
+
+        // take a loan
+        cometUsdc.withdraw(address(USDC), 1000e6);
     }
 }
