@@ -15,6 +15,9 @@ contract WidoCollateralSwapTest is ForkTest {
     WidoCollateralSwap widoCollateralSwap;
     MockSwap mockSwap;
 
+    /// @dev This is the max number of providers on the enum WidoCollateralSwap.Provider
+    uint8 constant MAX_PROVIDERS = 2;
+
     IERC3156FlashLender constant equalizerLender = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
     IPoolAddressesProvider constant aaveAddressesProvider = IPoolAddressesProvider(0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e);
     ICometTest constant cometUsdc = ICometTest(0xc3d688B66703497DAA19211EEdff47f25384cdc3);
@@ -50,8 +53,10 @@ contract WidoCollateralSwapTest is ForkTest {
         cometUsdc.withdraw(address(USDC), 1000e6);
     }
 
-    function test_itWorks_WhenAmountIsTheExpected() public {
+    function test_itWorks_WhenAmountIsTheExpected(uint8 _p) public {
         /** Arrange */
+
+        WidoCollateralSwap.Provider provider = _getProvider(_p);
 
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
@@ -102,7 +107,7 @@ contract WidoCollateralSwapTest is ForkTest {
             sigs,
             swap,
             address(cometUsdc),
-            WidoCollateralSwap.Provider.Equalizer
+            provider
         );
 
         /** Assert */
@@ -124,8 +129,10 @@ contract WidoCollateralSwapTest is ForkTest {
         assertEq(initialPrincipal, finalPrincipal, "Principal has changed");
     }
 
-    function test_itWorks_WhenPositiveSlippage() public {
+    function test_itWorks_WhenPositiveSlippage(uint8 _p) public {
         /** Arrange */
+
+        WidoCollateralSwap.Provider provider = _getProvider(_p);
 
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
@@ -179,7 +186,7 @@ contract WidoCollateralSwapTest is ForkTest {
             sigs,
             swap,
             address(cometUsdc),
-            WidoCollateralSwap.Provider.Equalizer
+            provider
         );
 
         /** Assert */
@@ -201,8 +208,10 @@ contract WidoCollateralSwapTest is ForkTest {
         assertEq(initialPrincipal, finalPrincipal, "Principal has changed");
     }
 
-    function test_revertIf_NegativeSlippage() public {
+    function test_revertIf_NegativeSlippage(uint8 _p) public {
         /** Arrange */
+
+        WidoCollateralSwap.Provider provider = _getProvider(_p);
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
@@ -249,12 +258,14 @@ contract WidoCollateralSwapTest is ForkTest {
             sigs,
             swap,
             address(cometUsdc),
-            WidoCollateralSwap.Provider.Equalizer
+            provider
         );
     }
 
-    function test_revertWhen_AllowSignatureHasWrongManager() public {
+    function test_revertWhen_AllowSignatureHasWrongManager(uint8 _p) public {
         /** Arrange */
+
+        WidoCollateralSwap.Provider provider = _getProvider(_p);
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
@@ -298,12 +309,14 @@ contract WidoCollateralSwapTest is ForkTest {
             sigs,
             swap,
             address(cometUsdc),
-            WidoCollateralSwap.Provider.Equalizer
+            provider
         );
     }
 
-    function test_revertWhen_AllowSignatureHasWrongExpiry() public {
+    function test_revertWhen_AllowSignatureHasWrongExpiry(uint8 _p) public {
         /** Arrange */
+
+        WidoCollateralSwap.Provider provider = _getProvider(_p);
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
@@ -347,12 +360,14 @@ contract WidoCollateralSwapTest is ForkTest {
             sigs,
             swap,
             address(cometUsdc),
-            WidoCollateralSwap.Provider.Equalizer
+            provider
         );
     }
 
-    function test_revertWhen_SignaturesAreNotConsecutive() public {
+    function test_revertWhen_SignaturesAreNotConsecutive(uint8 _p) public {
         /** Arrange */
+
+        WidoCollateralSwap.Provider provider = _getProvider(_p);
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
@@ -396,12 +411,14 @@ contract WidoCollateralSwapTest is ForkTest {
             sigs,
             swap,
             address(cometUsdc),
-            WidoCollateralSwap.Provider.Equalizer
+            provider
         );
     }
 
-    function test_revertWhen_RevokeSignatureHasWrongManager() public {
+    function test_revertWhen_RevokeSignatureHasWrongManager(uint8 _p) public {
         /** Arrange */
+
+        WidoCollateralSwap.Provider provider = _getProvider(_p);
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
@@ -445,11 +462,17 @@ contract WidoCollateralSwapTest is ForkTest {
             sigs,
             swap,
             address(cometUsdc),
-            WidoCollateralSwap.Provider.Equalizer
+            provider
         );
     }
 
     /// Helpers
+
+    /// @dev Converts a fuzzed uint8 into a Provider type
+    function _getProvider(uint8 _p) internal returns (WidoCollateralSwap.Provider) {
+        vm.assume(_p < MAX_PROVIDERS);
+        return WidoCollateralSwap.Provider(_p);
+    }
 
     /// @dev Generates the signature values for the `allowBySig` function
     function _sign(
