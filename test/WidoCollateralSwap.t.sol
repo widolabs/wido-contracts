@@ -15,7 +15,8 @@ contract WidoCollateralSwapTest is ForkTest {
     WidoCollateralSwap widoCollateralSwap;
     MockSwap mockSwap;
 
-    IERC3156FlashLender constant flashLoanProvider = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
+    IERC3156FlashLender constant equalizerLender = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
+    IPoolAddressesProvider constant aaveAddressesProvider = IPoolAddressesProvider(0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e);
     ICometTest constant cometUsdc = ICometTest(0xc3d688B66703497DAA19211EEdff47f25384cdc3);
 
     WidoCollateralSwap.Collateral existingCollateral = WidoCollateralSwap.Collateral(WBTC, 0.06e8);
@@ -26,7 +27,8 @@ contract WidoCollateralSwapTest is ForkTest {
 
     function setUp() public {
         widoCollateralSwap = new WidoCollateralSwap(
-            flashLoanProvider
+            equalizerLender,
+            aaveAddressesProvider
         );
         mockSwap = new MockSwap(
             ERC20(WETH),
@@ -99,7 +101,8 @@ contract WidoCollateralSwapTest is ForkTest {
             finalCollateral,
             sigs,
             swap,
-            address(cometUsdc)
+            address(cometUsdc),
+            WidoCollateralSwap.Provider.Equalizer
         );
 
         /** Assert */
@@ -175,7 +178,8 @@ contract WidoCollateralSwapTest is ForkTest {
             finalCollateral,
             sigs,
             swap,
-            address(cometUsdc)
+            address(cometUsdc),
+            WidoCollateralSwap.Provider.Equalizer
         );
 
         /** Assert */
@@ -244,7 +248,8 @@ contract WidoCollateralSwapTest is ForkTest {
             finalCollateral,
             sigs,
             swap,
-            address(cometUsdc)
+            address(cometUsdc),
+            WidoCollateralSwap.Provider.Equalizer
         );
     }
 
@@ -292,7 +297,8 @@ contract WidoCollateralSwapTest is ForkTest {
             finalCollateral,
             sigs,
             swap,
-            address(cometUsdc)
+            address(cometUsdc),
+            WidoCollateralSwap.Provider.Equalizer
         );
     }
 
@@ -340,7 +346,8 @@ contract WidoCollateralSwapTest is ForkTest {
             finalCollateral,
             sigs,
             swap,
-            address(cometUsdc)
+            address(cometUsdc),
+            WidoCollateralSwap.Provider.Equalizer
         );
     }
 
@@ -388,7 +395,8 @@ contract WidoCollateralSwapTest is ForkTest {
             finalCollateral,
             sigs,
             swap,
-            address(cometUsdc)
+            address(cometUsdc),
+            WidoCollateralSwap.Provider.Equalizer
         );
     }
 
@@ -436,7 +444,8 @@ contract WidoCollateralSwapTest is ForkTest {
             finalCollateral,
             sigs,
             swap,
-            address(cometUsdc)
+            address(cometUsdc),
+            WidoCollateralSwap.Provider.Equalizer
         );
     }
 

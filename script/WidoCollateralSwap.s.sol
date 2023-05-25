@@ -12,7 +12,8 @@ contract WidoFlashLoanScript is Script {
         vm.startBroadcast(deployerKey);
 
         WidoCollateralSwap wfl = new WidoCollateralSwap(
-            IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321) // Equalizer
+            IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321), // Equalizer
+            IPoolAddressesProvider(0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e) // Aave
         );
 
         vm.stopBroadcast();

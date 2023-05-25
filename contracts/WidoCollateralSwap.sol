@@ -5,15 +5,24 @@ pragma solidity 0.8.7;
 import {IERC3156FlashBorrower, IERC3156FlashLender} from "./interfaces/IERC3156.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
+import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
+import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {IWidoRouter} from "./interfaces/IWidoRouter.sol";
 import {IWidoTokenManager} from "./interfaces/IWidoTokenManager.sol";
 import {IComet} from "./interfaces/IComet.sol";
 
-contract WidoCollateralSwap is IERC3156FlashBorrower {
+contract WidoCollateralSwap is IERC3156FlashBorrower, IFlashLoanSimpleReceiver {
     using SafeMath for uint256;
 
-    /// @dev The used flash loan provider
-    IERC3156FlashLender immutable flashLoanProvider;
+    /// @dev Equalizer lender contract
+    IERC3156FlashLender public immutable equalizerProvider;
+
+    /// @dev Aave addresses provider contract
+    IPoolAddressesProvider public immutable override ADDRESSES_PROVIDER;
+
+    /// @dev Aave Pool contract
+    IPool public immutable override POOL;
 
     /// @dev The typehash for the ERC-3156 `onFlashLoan` return
     bytes32 internal constant ON_FLASH_LOAN_RESPONSE = keccak256("ERC3156FlashBorrower.onFlashLoan");
@@ -21,6 +30,11 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
     error InvalidProvider();
     error FeeUnsupported();
     error WidoRouterFailed();
+
+    enum Provider {
+        Equalizer,
+        Aave
+    }
 
     struct Collateral {
         address addr;
@@ -44,8 +58,10 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         bytes callData;
     }
 
-    constructor(IERC3156FlashLender _flashLoanProvider) {
-        flashLoanProvider = _flashLoanProvider;
+    constructor(IERC3156FlashLender _equalizerProvider, IPoolAddressesProvider _addressProvider) {
+        equalizerProvider = _equalizerProvider;
+        ADDRESSES_PROVIDER = _addressProvider;
+        POOL = IPool(_addressProvider.getPool());
     }
 
     /// @notice Performs a collateral swap
@@ -59,7 +75,8 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         Collateral calldata finalCollateral,
         Signatures calldata sigs,
         WidoSwap calldata swap,
-        address comet
+        address comet,
+        Provider provider
     ) external {
         bytes memory data = abi.encode(
             msg.sender,
@@ -69,12 +86,58 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
             swap
         );
 
-        flashLoanProvider.flashLoan(
-            IERC3156FlashBorrower(this),
-            finalCollateral.addr,
-            finalCollateral.amount,
-            data
+        if (provider == Provider.Equalizer) {
+            equalizerProvider.flashLoan(
+                IERC3156FlashBorrower(this),
+                finalCollateral.addr,
+                finalCollateral.amount,
+                data
+            );
+        }
+        else if (provider == Provider.Aave) {
+            POOL.flashLoanSimple(
+                address(this),
+                finalCollateral.addr,
+                finalCollateral.amount,
+                data,
+                0
+            );
+        }
+        else {
+            revert InvalidProvider();
+        }
+    }
+
+    /**
+    * @notice Executes an operation after receiving the flash-borrowed asset
+    * @dev Ensure that the contract can return the debt + premium, e.g., has
+    *      enough funds to repay and has approved the Pool to pull the total amount
+    * @param asset The address of the flash-borrowed asset
+    * @param amount The amount of the flash-borrowed asset
+    * @param premium The fee of the flash-borrowed asset
+    * @param params The byte-encoded params passed when initiating the flashloan
+    * @return True if the execution of the operation succeeds, false otherwise
+    */
+    function executeOperation(
+        address asset,
+        uint256 amount,
+        uint256 premium,
+        address /*initiator*/,
+        bytes calldata params
+    ) external override returns (bool) {
+        if (msg.sender != address(POOL)) {
+            revert InvalidProvider();
+        }
+
+        _performCollateralSwap(asset, amount, params);
+
+        // approve loan provider to pull lent amount + fee
+        IERC20(asset).approve(
+            address(POOL),
+            amount.add(premium)
         );
+
+        return true;
     }
 
     /// @notice Callback to be executed by the flash loan provider
@@ -86,13 +149,31 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         uint256 fee,
         bytes calldata data
     ) external override returns (bytes32) {
-        if (msg.sender != address(flashLoanProvider)) {
+        if (msg.sender != address(equalizerProvider)) {
             revert InvalidProvider();
         }
         if (fee != 0) {
             revert FeeUnsupported();
         }
 
+        _performCollateralSwap(borrowedAsset, borrowedAmount, data);
+
+        // approve loan provider to pull lent amount + fee
+        IERC20(borrowedAsset).approve(
+            address(equalizerProvider),
+            borrowedAmount.add(fee)
+        );
+
+        return ON_FLASH_LOAN_RESPONSE;
+    }
+
+    /// @dev Performs all the steps to swap collaterals on the Comet contract
+    function _performCollateralSwap(
+        address borrowedAsset,
+        uint256 borrowedAmount,
+        bytes memory data
+    ) internal {
+        // decode payload
         (
         address user,
         IComet comet,
@@ -120,14 +201,6 @@ contract WidoCollateralSwap is IERC3156FlashBorrower {
         if (surplusAmount > 0) {
             _supplyTo(comet, user, borrowedAsset, surplusAmount);
         }
-
-        // approve loan provider to pull lent amount + fee
-        IERC20(borrowedAsset).approve(
-            address(flashLoanProvider),
-            borrowedAmount.add(fee)
-        );
-
-        return ON_FLASH_LOAN_RESPONSE;
     }
 
     /// @dev Performs the swap of the collateral on the WidoRouter
