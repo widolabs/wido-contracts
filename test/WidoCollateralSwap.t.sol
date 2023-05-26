@@ -103,13 +103,12 @@ contract WidoCollateralSwapTest is ForkTest {
 
         /** Act */
 
-        widoCollateralSwap.swapCollateral(
+        _callContract(
+            provider,
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc),
-            provider
+            swap
         );
 
         /** Assert */
@@ -184,13 +183,12 @@ contract WidoCollateralSwapTest is ForkTest {
 
         /** Act */
 
-        widoCollateralSwap.swapCollateral(
+        _callContract(
+            provider,
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc),
-            provider
+            swap
         );
 
         /** Assert */
@@ -256,13 +254,12 @@ contract WidoCollateralSwapTest is ForkTest {
 
         /** Act */
 
-        widoCollateralSwap.swapCollateral(
+        _callContract(
+            provider,
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc),
-            provider
+            swap
         );
     }
 
@@ -307,13 +304,12 @@ contract WidoCollateralSwapTest is ForkTest {
 
         /** Act */
 
-        widoCollateralSwap.swapCollateral(
+        _callContract(
+            provider,
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc),
-            provider
+            swap
         );
     }
 
@@ -358,13 +354,12 @@ contract WidoCollateralSwapTest is ForkTest {
 
         /** Act */
 
-        widoCollateralSwap.swapCollateral(
+        _callContract(
+            provider,
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc),
-            provider
+            swap
         );
     }
 
@@ -409,13 +404,12 @@ contract WidoCollateralSwapTest is ForkTest {
 
         /** Act */
 
-        widoCollateralSwap.swapCollateral(
+        _callContract(
+            provider,
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc),
-            provider
+            swap
         );
     }
 
@@ -460,17 +454,47 @@ contract WidoCollateralSwapTest is ForkTest {
 
         /** Act */
 
-        widoCollateralSwap.swapCollateral(
+        _callContract(
+            provider,
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc),
-            provider
+            swap
         );
     }
 
     /// Helpers
+
+    /// @dev Performs the collateral swap execution depending on the provider
+    function _callContract(
+        WidoCollateralSwap.Provider _provider,
+        WidoCollateralSwap.Collateral memory _existingCollateral,
+        WidoCollateralSwap.Collateral memory _finalCollateral,
+        WidoCollateralSwap.Signatures memory _sigs,
+        WidoCollateralSwap.WidoSwap memory _swap
+    ) internal {
+        if (_provider == WidoCollateralSwap.Provider.Equalizer) {
+            widoCollateralSwap.swapCollateralEqualizer(
+                _existingCollateral,
+                _finalCollateral,
+                _sigs,
+                _swap,
+                address(cometUsdc)
+            );
+        }
+        else if (_provider == WidoCollateralSwap.Provider.Aave) {
+            widoCollateralSwap.swapCollateralAave(
+                _existingCollateral,
+                _finalCollateral,
+                _sigs,
+                _swap,
+                address(cometUsdc)
+            );
+        }
+        else {
+            revert("Wrong provider");
+        }
+    }
 
     /// @dev Converts a fuzzed uint8 into a Provider type
     function _getProvider(uint8 _p) internal pure returns (WidoCollateralSwap.Provider) {
