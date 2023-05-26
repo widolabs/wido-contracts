@@ -129,7 +129,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower, IFlashLoanSimpleReceiver {
             revert InvalidProvider();
         }
 
-        _performCollateralSwap(asset, amount, params);
+        _performCollateralSwap(asset, amount, premium, params);
 
         // approve loan provider to pull lent amount + fee
         IERC20(asset).approve(
@@ -156,7 +156,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower, IFlashLoanSimpleReceiver {
             revert FeeUnsupported();
         }
 
-        _performCollateralSwap(borrowedAsset, borrowedAmount, data);
+        _performCollateralSwap(borrowedAsset, borrowedAmount, fee, data);
 
         // approve loan provider to pull lent amount + fee
         IERC20(borrowedAsset).approve(
@@ -171,6 +171,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower, IFlashLoanSimpleReceiver {
     function _performCollateralSwap(
         address borrowedAsset,
         uint256 borrowedAmount,
+        uint256 fee,
         bytes memory data
     ) internal {
         // decode payload
@@ -186,7 +187,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower, IFlashLoanSimpleReceiver {
         );
 
         // supply new collateral on behalf of user
-        _supplyTo(comet, user, borrowedAsset, borrowedAmount);
+        _supplyTo(comet, user, borrowedAsset, borrowedAmount.sub(fee));
 
         // withdraw existing collateral
         _withdrawFrom(comet, user, existingCollateral, signatures);
@@ -195,7 +196,7 @@ contract WidoCollateralSwap is IERC3156FlashBorrower, IFlashLoanSimpleReceiver {
         _swap(existingCollateral, swapDetails);
 
         // check amount of surplus collateral
-        uint256 surplusAmount = IERC20(borrowedAsset).balanceOf(address(this)) - borrowedAmount;
+        uint256 surplusAmount = IERC20(borrowedAsset).balanceOf(address(this)) - borrowedAmount - fee;
 
         // if positive slippage, supply extra to user
         if (surplusAmount > 0) {

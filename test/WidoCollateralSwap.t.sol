@@ -58,6 +58,8 @@ contract WidoCollateralSwapTest is ForkTest {
 
         WidoCollateralSwap.Provider provider = _getProvider(_p);
 
+        uint256 fee = _providerFee(provider, finalCollateral.addr, finalCollateral.amount);
+
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
 
@@ -119,7 +121,7 @@ contract WidoCollateralSwapTest is ForkTest {
         assertEq(_userCollateral(user1, existingCollateral.addr), 0, "Initial collateral not zero");
 
         // user has final collateral deposited
-        assertEq(_userCollateral(user1, finalCollateral.addr), finalCollateral.amount, "Final collateral not deposited");
+        assertEq(_userCollateral(user1, finalCollateral.addr), finalCollateral.amount - fee, "Final collateral not deposited");
 
         // loan is still collateralized
         assertTrue(cometUsdc.isBorrowCollateralized(user1), "Position not collateralized");
@@ -133,6 +135,8 @@ contract WidoCollateralSwapTest is ForkTest {
         /** Arrange */
 
         WidoCollateralSwap.Provider provider = _getProvider(_p);
+
+        uint256 fee = _providerFee(provider, finalCollateral.addr, finalCollateral.amount);
 
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
@@ -198,7 +202,7 @@ contract WidoCollateralSwapTest is ForkTest {
         assertEq(_userCollateral(user1, existingCollateral.addr), 0, "Initial collateral not zero");
 
         // user has final collateral deposited
-        assertEq(_userCollateral(user1, finalCollateral.addr), _outputAmount, "Final collateral not deposited");
+        assertEq(_userCollateral(user1, finalCollateral.addr), _outputAmount - fee, "Final collateral not deposited");
 
         // loan is still collateralized
         assertTrue(cometUsdc.isBorrowCollateralized(user1), "Position not collateralized");
@@ -469,9 +473,27 @@ contract WidoCollateralSwapTest is ForkTest {
     /// Helpers
 
     /// @dev Converts a fuzzed uint8 into a Provider type
-    function _getProvider(uint8 _p) internal returns (WidoCollateralSwap.Provider) {
+    function _getProvider(uint8 _p) internal pure returns (WidoCollateralSwap.Provider) {
         vm.assume(_p < MAX_PROVIDERS);
         return WidoCollateralSwap.Provider(_p);
+    }
+
+    /// @dev Fetch the required fee for the given provider/token/amount
+    function _providerFee(
+        WidoCollateralSwap.Provider _provider,
+        address _token,
+        uint256 _amount
+    ) internal view returns (uint256) {
+        if (_provider == WidoCollateralSwap.Provider.Equalizer) {
+            return equalizerLender.flashFee(_token, _amount);
+        }
+        else if (_provider == WidoCollateralSwap.Provider.Aave) {
+            uint128 feeBps = IPool(aaveAddressesProvider.getPool()).FLASHLOAN_PREMIUM_TOTAL();
+            return uint256(_amount * feeBps / 10000);
+        }
+        else {
+            revert("Provider not implemented");
+        }
     }
 
     /// @dev Generates the signature values for the `allowBySig` function
