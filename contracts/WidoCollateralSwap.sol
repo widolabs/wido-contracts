@@ -64,19 +64,18 @@ contract WidoCollateralSwap is IERC3156FlashBorrower, IFlashLoanSimpleReceiver {
         POOL = IPool(_addressProvider.getPool());
     }
 
-    /// @notice Performs a collateral swap
+    /// @notice Performs a collateral swap with Equalizer
     /// @param existingCollateral The collateral currently locked in the Comet contract
     /// @param finalCollateral The final collateral desired collateral
     /// @param sigs The required signatures to allow and revoke permission to this contract
     /// @param swap The necessary data to swap one collateral for the other
     /// @param comet The address of the Comet contract to interact with
-    function swapCollateral(
+    function swapCollateralEqualizer(
         Collateral calldata existingCollateral,
         Collateral calldata finalCollateral,
         Signatures calldata sigs,
         WidoSwap calldata swap,
-        address comet,
-        Provider provider
+        address comet
     ) external {
         bytes memory data = abi.encode(
             msg.sender,
@@ -86,26 +85,42 @@ contract WidoCollateralSwap is IERC3156FlashBorrower, IFlashLoanSimpleReceiver {
             swap
         );
 
-        if (provider == Provider.Equalizer) {
-            equalizerProvider.flashLoan(
-                IERC3156FlashBorrower(this),
-                finalCollateral.addr,
-                finalCollateral.amount,
-                data
-            );
-        }
-        else if (provider == Provider.Aave) {
-            POOL.flashLoanSimple(
-                address(this),
-                finalCollateral.addr,
-                finalCollateral.amount,
-                data,
-                0
-            );
-        }
-        else {
-            revert InvalidProvider();
-        }
+        equalizerProvider.flashLoan(
+            IERC3156FlashBorrower(this),
+            finalCollateral.addr,
+            finalCollateral.amount,
+            data
+        );
+    }
+
+    /// @notice Performs a collateral swap with Aave
+    /// @param existingCollateral The collateral currently locked in the Comet contract
+    /// @param finalCollateral The final collateral desired collateral
+    /// @param sigs The required signatures to allow and revoke permission to this contract
+    /// @param swap The necessary data to swap one collateral for the other
+    /// @param comet The address of the Comet contract to interact with
+    function swapCollateralAave(
+        Collateral calldata existingCollateral,
+        Collateral calldata finalCollateral,
+        Signatures calldata sigs,
+        WidoSwap calldata swap,
+        address comet
+    ) external {
+        bytes memory data = abi.encode(
+            msg.sender,
+            comet,
+            existingCollateral,
+            sigs,
+            swap
+        );
+
+        POOL.flashLoanSimple(
+            address(this),
+            finalCollateral.addr,
+            finalCollateral.amount,
+            data,
+            0
+        );
     }
 
     /**
