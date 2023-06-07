@@ -29,6 +29,9 @@ contract WidoCollateralSwapTest is ForkTest {
     event WithdrawCollateral(address indexed src, address indexed to, address indexed asset, uint amount);
 
     function setUp() public {
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        vm.selectFork(forkId);
+
         widoCollateralSwap = new WidoCollateralSwap(
             equalizerLender,
             aaveAddressesProvider

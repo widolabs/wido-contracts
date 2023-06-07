@@ -12,4 +12,7 @@ remappings = [
     "solmate/=node_modules/solmate/",
 ]
 
+[rpc_endpoints]
+mainnet = "${ETH_NODE_URI_MAINNET}"
+
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
