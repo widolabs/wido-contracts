@@ -3,7 +3,7 @@ pragma solidity 0.8.7;
 
 import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
-import "../contracts/interfaces/IWidoTokenManager.sol";
+import "../../contracts/core/interfaces/IWidoTokenManager.sol";
 
 abstract contract ForkTest is Test {
     IWidoTokenManager widoTokenManager = IWidoTokenManager(0xF2F02200aEd0028fbB9F183420D3fE6dFd2d3EcD);

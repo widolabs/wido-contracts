@@ -4,8 +4,8 @@ import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 import {BigNumber, Signer} from "ethers";
 import hre from "hardhat";
 import {ethers} from "hardhat";
-import erc20ABI from "../../abi/erc20.json";
-import {IWidoRouter} from "../../typechain";
+import erc20ABI from "../../../abi/erc20.json";
+import {IWidoRouter} from "../../../typechain";
 
 const whaleAddress: {[key: string]: string} = {
   // Mainnet

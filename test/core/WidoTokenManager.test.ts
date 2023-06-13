@@ -2,11 +2,11 @@ import {expect} from "./setup/chai-setup";
 import * as utils from "./utils/test-utils";
 
 import {ethers, deployments, getUnnamedAccounts} from "hardhat";
-import {ERC20, WidoRouter} from "../typechain";
+import {ERC20, WidoRouter} from "../../typechain";
 import {setupUsers} from "./utils/users";
 import {USDC_MAP, WETH_MAP, ZERO_ADDRESS} from "./utils/addresses";
 import {ChainName} from "wido";
-import {IWidoRouter} from "../typechain/contracts/WidoRouter";
+import {IWidoRouter} from "../../typechain/contracts/core/WidoRouter";
 
 const setup = deployments.createFixture(async () => {
   await deployments.fixture(["WidoRouter", "USDC"]);

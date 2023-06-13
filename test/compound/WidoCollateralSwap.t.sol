@@ -5,13 +5,13 @@ import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./mocks/MockSwap.sol";
-import "../contracts/interfaces/IComet.sol";
 import "./interfaces/ICometTest.sol";
 import "./ForkTest.sol";
-import "../contracts/libraries/LibCollateralSwap.sol";
-import "../contracts/WidoCollateralSwap_Aave.sol";
-import "../contracts/WidoCollateralSwap_ERC3156.sol";
-import "../contracts/interfaces/IWidoCollateralSwap.sol";
+import "../../contracts/compound/interfaces/IComet.sol";
+import "../../contracts/compound/interfaces/IWidoCollateralSwap.sol";
+import "../../contracts/compound/libraries/LibCollateralSwap.sol";
+import "../../contracts/compound/WidoCollateralSwap_Aave.sol";
+import "../../contracts/compound/WidoCollateralSwap_ERC3156.sol";
 
 contract WidoCollateralSwapTest is ForkTest {
     using SafeMath for uint256;

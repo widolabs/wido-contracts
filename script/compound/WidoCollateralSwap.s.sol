@@ -2,8 +2,8 @@
 pragma solidity 0.8.7;
 
 import "forge-std/Script.sol";
-import "../contracts/WidoCollateralSwap_Aave.sol";
-import "../contracts/WidoCollateralSwap_ERC3156.sol";
+import "../../contracts/compound/WidoCollateralSwap_Aave.sol";
+import "../../contracts/compound/WidoCollateralSwap_ERC3156.sol";
 
 contract WidoFlashLoanScript is Script {
     function setUp() public {}

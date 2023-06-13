@@ -2,7 +2,7 @@ import {expect} from "./setup/chai-setup";
 import * as utils from "./utils/test-utils";
 
 import {ethers, deployments, getUnnamedAccounts} from "hardhat";
-import {WidoZapUniswapV2Pool} from "../typechain";
+import {WidoZapUniswapV2Pool} from "../../typechain";
 import {setupUsers} from "./utils/users";
 import {UNI_ROUTER_MAP, USDC_MAP, USDC_WETH_LP_MAP, WETH_MAP} from "./utils/addresses";
 import {ChainName} from "wido";
