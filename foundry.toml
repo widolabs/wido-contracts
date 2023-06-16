@@ -1,0 +1,25 @@
+[profile.default]
+src = "contracts"
+out = "artifacts"
+libs = ["node_modules", "lib"]
+remappings = [
+    "@ensdomains/=node_modules/@ensdomains/",
+    "@openzeppelin/=node_modules/@openzeppelin/",
+    "@uniswap/=node_modules/@uniswap/",
+    "eth-gas-reporter/=node_modules/eth-gas-reporter/",
+    "hardhat-deploy/=node_modules/hardhat-deploy/",
+    "hardhat/=node_modules/hardhat/",
+    "solmate/=node_modules/solmate/",
+]
+#libraries = [
+#  "contracts/compound/libraries/LibCollateralSwap.sol:LibCollateralSwap:0x8D650E711df1742292266b82e97D15FC7DFbDd13"
+#]
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
+polygon = { key = "${POLYGONSCAN_API_KEY}", url = "https://api.polygonscan.com/api" }
+
+[rpc_endpoints]
+mainnet = "${ETH_NODE_URI_MAINNET}"
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config

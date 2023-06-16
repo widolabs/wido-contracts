@@ -2,13 +2,13 @@ import {expect} from "./setup/chai-setup";
 import * as utils from "./utils/test-utils";
 
 import {ethers, deployments, getUnnamedAccounts, getChainId, getNamedAccounts} from "hardhat";
-import {WidoRouter, WidoZapUniswapV2Pool} from "../typechain";
+import {WidoRouter, WidoZapUniswapV2Pool} from "../../typechain";
 import {setupUsers} from "./utils/users";
 import {UNI_ROUTER_MAP, USDC_MAP, USDC_WETH_LP_MAP, WETH_MAP, ZERO_ADDRESS} from "./utils/addresses";
 import {ChainName} from "wido";
-import {IWidoRouter} from "../typechain/contracts/WidoRouter";
+import {IWidoRouter} from "../../typechain/contracts/core/WidoRouter";
 import {BigNumber} from "ethers";
-import WethAbi from "../abi/weth.json";
+import WethAbi from "../../abi/weth.json";
 
 const setup = deployments.createFixture(async () => {
   await deployments.fixture(["WidoRouter", "WidoZapUniswapV2Pool"]);
