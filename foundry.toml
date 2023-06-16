@@ -11,6 +11,12 @@ remappings = [
     "hardhat/=node_modules/hardhat/",
     "solmate/=node_modules/solmate/",
 ]
+libraries = [
+  "contracts/compound/libraries/LibCollateralSwap.sol:LibCollateralSwap:0x8D650E711df1742292266b82e97D15FC7DFbDd13"
+]
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
 
 [rpc_endpoints]
 mainnet = "${ETH_NODE_URI_MAINNET}"
