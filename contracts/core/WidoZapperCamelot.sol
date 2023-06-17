@@ -14,6 +14,19 @@ pragma solidity 0.8.7;
 
 import "./WidoZapperUniswapV2.sol";
 
+interface CamelotRouter {
+    function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
+
+    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        address referrer,
+        uint deadline
+    ) external;
+}
+
 /// @title Camelot pools Zapper
 /// @notice Add or remove liquidity from CamelotDEX pools using just one of the pool tokens
 contract WidoZapperCamelot is WidoZapperUniswapV2 {
@@ -27,7 +40,8 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
     )
     internal virtual override
     returns (uint256[] memory amounts) {
-        return router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        amounts = CamelotRouter(address(router)).getAmountsOut(amountIn, path);
+        CamelotRouter(address(router)).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             amountIn,
             1,
             path,
