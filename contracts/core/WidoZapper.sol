@@ -19,10 +19,9 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol";
 
-/// @title Uniswap V2 pools Zap
-/// @author Wido, Beefy.Finance
-/// @notice Add or remove liquidity from Uniswap V2 pools using just one of the pool tokens
-contract WidoZapUniswapV2Pool {
+/// @notice Generic logic for the zapper contract
+/// @notice Adds or removes liquidity from UniswapV2-like pools using just one of the pool tokens
+abstract contract WidoZapper {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -37,11 +36,12 @@ contract WidoZapUniswapV2Pool {
         IUniswapV2Pair pair,
         address fromToken,
         uint256 amount,
-        uint256 minToToken
+        uint256 minToToken,
+        bytes memory extra
     ) external {
         IERC20(fromToken).safeTransferFrom(msg.sender, address(this), amount);
 
-        uint256 toTokenAmount = _swapAndAddLiquidity(router, pair, fromToken);
+        uint256 toTokenAmount = _swapAndAddLiquidity(router, pair, fromToken, extra);
         require(toTokenAmount >= minToToken, "Slippage too high");
 
         IERC20(address(pair)).safeTransfer(msg.sender, toTokenAmount);
@@ -58,11 +58,12 @@ contract WidoZapUniswapV2Pool {
         IUniswapV2Pair pair,
         uint256 amount,
         address toToken,
-        uint256 minToToken
+        uint256 minToToken,
+        bytes memory extra
     ) external {
         IERC20(address(pair)).safeTransferFrom(msg.sender, address(this), amount);
 
-        uint256 toTokenAmount = _removeLiquidityAndSwap(router, pair, toToken);
+        uint256 toTokenAmount = _removeLiquidityAndSwap(router, pair, toToken, extra);
         require(toTokenAmount >= minToToken, "Slippage too high");
 
         IERC20(toToken).safeTransfer(msg.sender, toTokenAmount);
@@ -71,29 +72,35 @@ contract WidoZapUniswapV2Pool {
     function _removeLiquidityAndSwap(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
-        address toToken
+        address toToken,
+        bytes memory extra
     ) private returns (uint256) {
-        require(pair.factory() == router.factory(), "Incompatible router and pair");
+        _requires(router, pair);
 
         address token0 = pair.token0();
         address token1 = pair.token1();
         require(token0 == toToken || token1 == toToken, "Desired token not present in liquidity pair");
 
-        IERC20(address(pair)).safeTransfer(address(pair), IERC20(address(pair)).balanceOf(address(this)));
+        IERC20(address(pair)).safeTransfer(
+            address(pair),
+            IERC20(address(pair)).balanceOf(address(this))
+        );
         pair.burn(address(this));
 
-        address swapToken = token1 == toToken ? token0 : token1;
+        address swapToken = token1 == toToken
+        ? token0
+        : token1;
+
         address[] memory path = new address[](2);
         path[0] = swapToken;
         path[1] = toToken;
 
         _approveTokenIfNeeded(path[0], address(router));
-        router.swapExactTokensForTokens(
+        _swap(
+            router,
             IERC20(swapToken).balanceOf(address(this)),
-            1,
             path,
-            address(this),
-            block.timestamp
+            extra
         );
 
         return IERC20(toToken).balanceOf(address(this));
@@ -102,18 +109,21 @@ contract WidoZapUniswapV2Pool {
     function _swapAndAddLiquidity(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
-        address fromToken
+        address fromToken,
+        bytes memory extra
     ) private returns (uint256) {
-        require(pair.factory() == router.factory(), "Incompatible router and pair");
+        _requires(router, pair);
 
-        (uint256 reserveA, uint256 reserveB, ) = pair.getReserves();
+        (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
 
         bool isInputA = pair.token0() == fromToken;
         require(isInputA || pair.token1() == fromToken, "Input token not present in liquidity pair");
 
         address[] memory path = new address[](2);
         path[0] = fromToken;
-        path[1] = isInputA ? pair.token1() : pair.token0();
+        path[1] = isInputA
+        ? pair.token1()
+        : pair.token0();
 
         uint256 fullInvestment = IERC20(fromToken).balanceOf(address(this));
         uint256 swapAmountIn;
@@ -124,24 +134,21 @@ contract WidoZapUniswapV2Pool {
         }
 
         _approveTokenIfNeeded(path[0], address(router));
-        uint256[] memory swapedAmounts = router.swapExactTokensForTokens(
+        uint256[] memory swapedAmounts = _swap(
+            router,
             swapAmountIn,
-            1,
             path,
-            address(this),
-            block.timestamp
+            extra
         );
 
         _approveTokenIfNeeded(path[1], address(router));
-        (, , uint256 poolTokenAmount) = router.addLiquidity(
+        (, , uint256 poolTokenAmount) = _addLiquidity(
+            router,
             path[0],
             path[1],
             fullInvestment.sub(swapedAmounts[0]),
             swapedAmounts[1],
-            1,
-            1,
-            address(this),
-            block.timestamp
+            extra
         );
 
         return poolTokenAmount;
@@ -154,8 +161,8 @@ contract WidoZapUniswapV2Pool {
         uint256 reserveB
     ) private pure returns (uint256 swapAmount) {
         uint256 halfInvestment = investmentA / 2;
-        uint256 nominator = router.getAmountOut(halfInvestment, reserveA, reserveB);
-        uint256 denominator = router.quote(halfInvestment, reserveA.add(halfInvestment), reserveB.sub(nominator));
+        uint256 nominator = _getAmountOut(router, halfInvestment, reserveA, reserveB);
+        uint256 denominator = _quote(router, halfInvestment, reserveA.add(halfInvestment), reserveB.sub(nominator));
         swapAmount = investmentA.sub(Babylonian.sqrt((halfInvestment * halfInvestment * nominator) / denominator));
     }
 
@@ -180,7 +187,7 @@ contract WidoZapUniswapV2Pool {
         address token0 = pair.token0();
         address token1 = pair.token1();
 
-        (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
+        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
         uint256 balance0 = IERC20(token0).balanceOf(address(pair));
         uint256 balance1 = IERC20(token1).balanceOf(address(pair));
         uint256 lpTotalSupply = pair.totalSupply();
@@ -193,9 +200,9 @@ contract WidoZapUniswapV2Pool {
 
         if (isZapFromToken0) {
             halfAmount0 = amount / 2;
-            halfAmount1 = router.getAmountOut(amount, reserve0, reserve1);
+            halfAmount1 = _getAmountOut(router, amount, reserve0, reserve1);
         } else {
-            halfAmount0 = router.getAmountOut(amount, reserve1, reserve0);
+            halfAmount0 = _getAmountOut(router, amount, reserve1, reserve0);
             halfAmount1 = amount / 2;
         }
 
@@ -217,7 +224,7 @@ contract WidoZapUniswapV2Pool {
         address toToken,
         uint256 lpAmount
     ) external view returns (uint256 minToToken) {
-        (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
+        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
         uint256 lpTotalSupply = pair.totalSupply();
 
         bool isZapToToken0 = pair.token0() == toToken;
@@ -228,12 +235,50 @@ contract WidoZapUniswapV2Pool {
 
         if (isZapToToken0) {
             amount0 = (lpAmount * reserve0) / lpTotalSupply;
-            amount1 = router.getAmountOut((lpAmount * reserve1) / lpTotalSupply, reserve1, reserve0);
+            amount1 = _getAmountOut(router, (lpAmount * reserve1) / lpTotalSupply, reserve1, reserve0);
         } else {
-            amount0 = router.getAmountOut((lpAmount * reserve0) / lpTotalSupply, reserve0, reserve1);
+            amount0 = _getAmountOut(router, (lpAmount * reserve0) / lpTotalSupply, reserve0, reserve1);
             amount1 = (lpAmount * reserve1) / lpTotalSupply;
         }
 
         return amount0 + amount1;
     }
+
+    /** Virtual functions */
+
+    /// @dev This function checks that the pair belongs to the factory
+    function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair)
+    internal virtual;
+
+    /// @dev This function quotes the expected amountB given a certain amountA, while the pool has the specified reserves
+    function _quote(IUniswapV2Router02 router, uint256 amountA, uint256 reserveA, uint256 reserveB)
+    internal pure virtual
+    returns (uint256 amountB);
+
+    /// @dev This function computes the amount out for a certain amount in
+    function _getAmountOut(IUniswapV2Router02 router, uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
+    internal pure virtual
+    returns (uint256 amountOut);
+
+    /// @dev This function adds liquidity into the pool
+    function _addLiquidity(
+        IUniswapV2Router02 router,
+        address tokenA,
+        address tokenB,
+        uint amountADesired,
+        uint amountBDesired,
+        bytes memory extra
+    )
+    internal virtual
+    returns (uint amountA, uint amountB, uint liquidity);
+
+    /// @dev This function swap amountIn through the path
+    function _swap(
+        IUniswapV2Router02 router,
+        uint256 amountIn,
+        address[] memory path,
+        bytes memory extra
+    )
+    internal virtual
+    returns (uint[] memory amounts);
 }
