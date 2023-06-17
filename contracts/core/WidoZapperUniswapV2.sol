@@ -48,7 +48,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
         bytes memory //extra
     )
     internal virtual override
-    returns (uint amountA, uint amountB, uint liquidity) {
+    returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
         return router.addLiquidity(
             tokenA,
             tokenB,
@@ -69,7 +69,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
         bytes memory //extra
     )
     internal virtual override
-    returns (uint[] memory amounts) {
+    returns (uint256[] memory amounts) {
         return router.swapExactTokensForTokens(
             amountIn,
             1,

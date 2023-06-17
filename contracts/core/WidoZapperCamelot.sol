@@ -26,7 +26,7 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
         bytes memory //extra
     )
     internal virtual override
-    returns (uint[] memory amounts) {
+    returns (uint256[] memory amounts) {
         return router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             amountIn,
             1,

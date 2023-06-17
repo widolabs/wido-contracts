@@ -270,7 +270,7 @@ abstract contract WidoZapper {
         bytes memory extra
     )
     internal virtual
-    returns (uint amountA, uint amountB, uint liquidity);
+    returns (uint256 amountA, uint256 amountB, uint256 liquidity);
 
     /// @dev This function swap amountIn through the path
     function _swap(
@@ -280,5 +280,5 @@ abstract contract WidoZapper {
         bytes memory extra
     )
     internal virtual
-    returns (uint[] memory amounts);
+    returns (uint256[] memory amounts);
 }
