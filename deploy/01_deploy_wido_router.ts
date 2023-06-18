@@ -1,8 +1,8 @@
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 import {DeployFunction} from "hardhat-deploy/types";
-import WidoRouterArtifact from "../artifacts/contracts/WidoRouter.sol/WidoRouter.json";
+import WidoRouterArtifact from "../artifacts/contracts/core/WidoRouter.sol/WidoRouter.json";
 import {existsSync, readFileSync} from "fs";
-import {WRAPPED_NATIVE_MAP} from "../test/utils/addresses";
+import {WRAPPED_NATIVE_MAP} from "../test/core/utils/addresses";
 import {ChainName} from "types";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {

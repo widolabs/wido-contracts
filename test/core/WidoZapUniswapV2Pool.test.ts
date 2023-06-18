@@ -2,15 +2,18 @@ import {expect} from "./setup/chai-setup";
 import * as utils from "./utils/test-utils";
 
 import {ethers, deployments, getUnnamedAccounts} from "hardhat";
-import {WidoZapUniswapV2Pool} from "../../typechain";
+import { WidoZapperUniswapV2 } from "../../typechain";
 import {setupUsers} from "./utils/users";
 import {UNI_ROUTER_MAP, USDC_MAP, USDC_WETH_LP_MAP, WETH_MAP} from "./utils/addresses";
 import {ChainName} from "wido";
 
 const setup = deployments.createFixture(async () => {
-  await deployments.fixture(["WidoZapUniswapV2Pool"]);
+  const zapper = await ethers.getContractFactory("WidoZapperUniswapV2")
+    .then(factory => {
+      return factory.deploy()
+    })
   const contracts = {
-    WidoZapUniswapV2Pool: <WidoZapUniswapV2Pool>await ethers.getContract("WidoZapUniswapV2Pool"),
+    WidoZapUniswapV2Pool: <WidoZapperUniswapV2>zapper,
   };
   const users = await setupUsers(await getUnnamedAccounts(), contracts);
   return {
@@ -28,8 +31,8 @@ describe(`UniV2Zap`, function () {
   if (!["mainnet", "polygon"].includes(process.env.HARDHAT_FORK as ChainName)) {
     return;
   }
-  let user: {address: string} & {WidoZapUniswapV2Pool: WidoZapUniswapV2Pool};
-  let widoZapUniswapV2Pool: WidoZapUniswapV2Pool;
+  let user: {address: string} & {WidoZapUniswapV2Pool: WidoZapperUniswapV2};
+  let widoZapUniswapV2Pool: WidoZapperUniswapV2;
 
   before(async function () {
     const {WidoZapUniswapV2Pool, users} = await setup();
@@ -56,7 +59,7 @@ describe(`UniV2Zap`, function () {
     );
     minToToken = minToToken.mul(998).div(1000);
 
-    await user.WidoZapUniswapV2Pool.zapIn(UNI_ROUTER, USDC_WETH_LP, fromToken, amount, minToToken);
+    await user.WidoZapUniswapV2Pool.zapIn(UNI_ROUTER, USDC_WETH_LP, fromToken, amount, minToToken, "0x");
 
     const finalFromTokenBal = await utils.balanceOf(fromToken, user.address);
     const finalToTokenBal = await utils.balanceOf(toToken, user.address);
@@ -153,7 +156,7 @@ describe(`UniV2Zap`, function () {
       amount
     );
     minToToken = minToToken.mul(1001).div(1000);
-
+<
     await expect(
       user.WidoZapUniswapV2Pool.zapIn(UNI_ROUTER, USDC_WETH_LP, fromToken, amount, minToToken)
     ).to.be.revertedWith("Slippage too high");
