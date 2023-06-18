@@ -25,7 +25,7 @@ contract WidoZapperUniswapV2Test is ForkTest {
         vm.label(USDC_WETH_LP, "USDC_WETH_LP");
     }
 
-    function test_zapUSDCForUSDC_WETH_LP() public {
+    function test_zapUSDCForLP() public {
         /** Arrange */
         uint256 amount = 150_000_000;
         address fromAsset = USDC;
@@ -44,7 +44,7 @@ contract WidoZapperUniswapV2Test is ForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapWETHForUSDC_WETH_LP() public {
+    function test_zapWETHForLP() public {
         /** Arrange */
         uint256 amount = 0.5 ether;
         address fromAsset = WETH;
@@ -63,7 +63,7 @@ contract WidoZapperUniswapV2Test is ForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapUSDC_WETH_LPForUSDC() public {
+    function test_zapLPForUSDC() public {
         /** Arrange */
         _zapIn(zapper, USDC, 150_000_000);
 
@@ -84,7 +84,7 @@ contract WidoZapperUniswapV2Test is ForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapUSDC_WETH_LPForWETH() public {
+    function test_zapLPForWETH() public {
         /** Arrange */
         _zapIn(zapper, WETH, 0.5 ether);
 
@@ -105,7 +105,7 @@ contract WidoZapperUniswapV2Test is ForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_revertWhen_zapWETHForUSDC_WETH_LP_HasHighSlippage() public {
+    function test_revertWhen_zapWETHForLP_HasHighSlippage() public {
         /** Arrange */
         uint256 amount = 0.5 ether;
         address fromAsset = WETH;
@@ -138,7 +138,7 @@ contract WidoZapperUniswapV2Test is ForkTest {
         );
     }
 
-    function test_revertWhen_zapWETHForUSDC_WETH_LP_NoApproval() public {
+    function test_revertWhen_zapWETHForLP_NoApproval() public {
         /** Arrange */
         uint256 amount = 0.5 ether;
         address fromAsset = WETH;
@@ -169,7 +169,7 @@ contract WidoZapperUniswapV2Test is ForkTest {
         );
     }
 
-    function test_revertWhen_zapUSDC_WETH_LPForWETH_NoBalance() public {
+    function test_revertWhen_zapLPForWETH_NoBalance() public {
         /** Arrange */
         address fromAsset = USDC_WETH_LP;
         address toAsset = WETH;
