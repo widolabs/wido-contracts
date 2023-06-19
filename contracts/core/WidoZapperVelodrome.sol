@@ -119,12 +119,11 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
     )
     internal virtual override
     returns (uint256[] memory amounts) {
-        bool stable = abi.decode(extra, (bool));
         VelodromeRouter.route[] memory routes = new VelodromeRouter.route[](1);
         routes[0] = VelodromeRouter.route({
             from : path[0],
             to : path[1],
-            stable : stable
+            stable : abi.decode(extra, (bool))
         });
         return VelodromeRouter(address(router)).swapExactTokensForTokens(
             amountIn,
