@@ -69,6 +69,88 @@ contract WidoZapperUniswapV2 {
         IERC20(toToken).safeTransfer(msg.sender, toTokenAmount);
     }
 
+    /// @notice Calculate the amount of pool tokens received when adding liquidity to an UniswapV2 pool using a single asset
+    /// @param router Address of the UniswapV2Router02 contract
+    /// @param pair Address of the pair contract to add liquidity into
+    /// @param fromToken Address of the from token
+    /// @param amount Amount of the from token
+    /// @return minToToken Minimum amount of the lp token the user would receive in a no-slippage scenario.
+    function calcMinToAmountForZapIn(
+        IUniswapV2Router02 router,
+        IUniswapV2Pair pair,
+        address fromToken,
+        uint256 amount
+    ) external view returns (uint256 minToToken) {
+        address token0 = pair.token0();
+        address token1 = pair.token1();
+
+        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
+        uint256 balance0 = IERC20(token0).balanceOf(address(pair));
+        uint256 balance1 = IERC20(token1).balanceOf(address(pair));
+        uint256 lpTotalSupply = pair.totalSupply();
+
+        bool isZapFromToken0 = token0 == fromToken;
+        require(isZapFromToken0 || token1 == fromToken, "Input token not present in liquidity pair");
+
+        uint256 halfAmount0;
+        uint256 halfAmount1;
+
+        if (isZapFromToken0) {
+            halfAmount0 = amount / 2;
+            halfAmount1 = _getAmountOut(router, halfAmount0, reserve0, reserve1, token0, token1);
+        } else {
+            halfAmount1 = amount / 2;
+            halfAmount0 = _getAmountOut(router, halfAmount1, reserve1, reserve0, token1, token0);
+        }
+
+        uint256 amount0 = balance0 + halfAmount0 - reserve0;
+        uint256 amount1 = balance1 + halfAmount1 - reserve1;
+
+        return Math.min(amount0.mul(lpTotalSupply) / reserve0, amount1.mul(lpTotalSupply) / reserve1);
+    }
+
+    /// @notice Calculate the amount of to tokens received when removing liquidity from an UniswapV2 pool into a single asset.
+    /// @param router Address of the UniswapV2Router02 contract
+    /// @param pair Address of the pair contract to remove liquidity from
+    /// @param toToken Address of the to token
+    /// @param lpAmount Amount of the lp token
+    /// @return minToToken Minimum amount of the to token the user would receive in a no-slippage scenario.
+    function calcMinToAmountForZapOut(
+        IUniswapV2Router02 router,
+        IUniswapV2Pair pair,
+        address toToken,
+        uint256 lpAmount
+    ) external view returns (uint256 minToToken) {
+        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
+        uint256 lpTotalSupply = pair.totalSupply();
+
+        bool isZapToToken0 = pair.token0() == toToken;
+        require(isZapToToken0 || pair.token1() == toToken, "Input token not present in liquidity pair");
+
+        uint256 amount0;
+        uint256 amount1;
+
+        if (isZapToToken0) {
+            amount0 = (lpAmount * reserve0) / lpTotalSupply;
+            amount1 = _getAmountOut(
+                router,
+                (lpAmount * reserve1) / lpTotalSupply,
+                reserve1, reserve0,
+                pair.token1(), pair.token0()
+            );
+        } else {
+            amount0 = _getAmountOut(
+                router,
+                (lpAmount * reserve0) / lpTotalSupply,
+                reserve0, reserve1,
+                pair.token0(), pair.token1()
+            );
+            amount1 = (lpAmount * reserve1) / lpTotalSupply;
+        }
+
+        return amount0 + amount1;
+    }
+
     function _removeLiquidityAndSwap(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -182,88 +264,6 @@ contract WidoZapperUniswapV2 {
         if (IERC20(token).allowance(address(this), spender) == 0) {
             IERC20(token).safeApprove(spender, type(uint256).max);
         }
-    }
-
-    /// @notice Calculate the amount of pool tokens received when adding liquidity to an UniswapV2 pool using a single asset
-    /// @param router Address of the UniswapV2Router02 contract
-    /// @param pair Address of the pair contract to add liquidity into
-    /// @param fromToken Address of the from token
-    /// @param amount Amount of the from token
-    /// @return minToToken Minimum amount of the lp token the user would receive in a no-slippage scenario.
-    function calcMinToAmountForZapIn(
-        IUniswapV2Router02 router,
-        IUniswapV2Pair pair,
-        address fromToken,
-        uint256 amount
-    ) external view returns (uint256 minToToken) {
-        address token0 = pair.token0();
-        address token1 = pair.token1();
-
-        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-        uint256 balance0 = IERC20(token0).balanceOf(address(pair));
-        uint256 balance1 = IERC20(token1).balanceOf(address(pair));
-        uint256 lpTotalSupply = pair.totalSupply();
-
-        bool isZapFromToken0 = token0 == fromToken;
-        require(isZapFromToken0 || token1 == fromToken, "Input token not present in liquidity pair");
-
-        uint256 halfAmount0;
-        uint256 halfAmount1;
-
-        if (isZapFromToken0) {
-            halfAmount0 = amount / 2;
-            halfAmount1 = _getAmountOut(router, halfAmount0, reserve0, reserve1, token0, token1);
-        } else {
-            halfAmount1 = amount / 2;
-            halfAmount0 = _getAmountOut(router, halfAmount1, reserve1, reserve0, token1, token0);
-        }
-
-        uint256 amount0 = balance0 + halfAmount0 - reserve0;
-        uint256 amount1 = balance1 + halfAmount1 - reserve1;
-
-        return Math.min(amount0.mul(lpTotalSupply) / reserve0, amount1.mul(lpTotalSupply) / reserve1);
-    }
-
-    /// @notice Calculate the amount of to tokens received when removing liquidity from an UniswapV2 pool into a single asset.
-    /// @param router Address of the UniswapV2Router02 contract
-    /// @param pair Address of the pair contract to remove liquidity from
-    /// @param toToken Address of the to token
-    /// @param lpAmount Amount of the lp token
-    /// @return minToToken Minimum amount of the to token the user would receive in a no-slippage scenario.
-    function calcMinToAmountForZapOut(
-        IUniswapV2Router02 router,
-        IUniswapV2Pair pair,
-        address toToken,
-        uint256 lpAmount
-    ) external view returns (uint256 minToToken) {
-        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-        uint256 lpTotalSupply = pair.totalSupply();
-
-        bool isZapToToken0 = pair.token0() == toToken;
-        require(isZapToToken0 || pair.token1() == toToken, "Input token not present in liquidity pair");
-
-        uint256 amount0;
-        uint256 amount1;
-
-        if (isZapToToken0) {
-            amount0 = (lpAmount * reserve0) / lpTotalSupply;
-            amount1 = _getAmountOut(
-                router,
-                (lpAmount * reserve1) / lpTotalSupply,
-                reserve1, reserve0,
-                pair.token1(), pair.token0()
-            );
-        } else {
-            amount0 = _getAmountOut(
-                router,
-                (lpAmount * reserve0) / lpTotalSupply,
-                reserve0, reserve1,
-                pair.token0(), pair.token1()
-            );
-            amount1 = (lpAmount * reserve1) / lpTotalSupply;
-        }
-
-        return amount0 + amount1;
     }
 
     /** Virtual functions */
