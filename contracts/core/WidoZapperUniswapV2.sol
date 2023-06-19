@@ -212,10 +212,10 @@ contract WidoZapperUniswapV2 {
 
         if (isZapFromToken0) {
             halfAmount0 = amount / 2;
-            halfAmount1 = _getAmountOut(router, amount, reserve0, reserve1, token0, token1);
+            halfAmount1 = _getAmountOut(router, halfAmount0, reserve0, reserve1, token0, token1);
         } else {
-            halfAmount0 = _getAmountOut(router, amount, reserve1, reserve0, token1, token0);
             halfAmount1 = amount / 2;
+            halfAmount0 = _getAmountOut(router, halfAmount1, reserve1, reserve0, token1, token0);
         }
 
         uint256 amount0 = balance0 + halfAmount0 - reserve0;
