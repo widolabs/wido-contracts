@@ -128,9 +128,19 @@ contract WidoZapperUniswapV2 {
         uint256 fullInvestment = IERC20(fromToken).balanceOf(address(this));
         uint256 swapAmountIn;
         if (isInputA) {
-            swapAmountIn = _getSwapAmount(router, fullInvestment, reserveA, reserveB);
+            swapAmountIn = _getSwapAmount(
+                router,
+                fullInvestment,
+                reserveA, reserveB,
+                pair.token0(), pair.token1()
+            );
         } else {
-            swapAmountIn = _getSwapAmount(router, fullInvestment, reserveB, reserveA);
+            swapAmountIn = _getSwapAmount(
+                router,
+                fullInvestment,
+                reserveB, reserveA,
+                pair.token1(), pair.token0()
+            );
         }
 
         _approveTokenIfNeeded(path[0], address(router));
@@ -158,10 +168,12 @@ contract WidoZapperUniswapV2 {
         IUniswapV2Router02 router,
         uint256 investmentA,
         uint256 reserveA,
-        uint256 reserveB
+        uint256 reserveB,
+        address tokenA,
+        address tokenB
     ) private pure returns (uint256 swapAmount) {
         uint256 halfInvestment = investmentA / 2;
-        uint256 nominator = _getAmountOut(router, halfInvestment, reserveA, reserveB);
+        uint256 nominator = _getAmountOut(router, halfInvestment, reserveA, reserveB, tokenA, tokenB);
         uint256 denominator = _quote(router, halfInvestment, reserveA.add(halfInvestment), reserveB.sub(nominator));
         swapAmount = investmentA.sub(Babylonian.sqrt((halfInvestment * halfInvestment * nominator) / denominator));
     }
@@ -200,9 +212,9 @@ contract WidoZapperUniswapV2 {
 
         if (isZapFromToken0) {
             halfAmount0 = amount / 2;
-            halfAmount1 = _getAmountOut(router, amount, reserve0, reserve1);
+            halfAmount1 = _getAmountOut(router, amount, reserve0, reserve1, token0, token1);
         } else {
-            halfAmount0 = _getAmountOut(router, amount, reserve1, reserve0);
+            halfAmount0 = _getAmountOut(router, amount, reserve1, reserve0, token1, token0);
             halfAmount1 = amount / 2;
         }
 
@@ -235,9 +247,19 @@ contract WidoZapperUniswapV2 {
 
         if (isZapToToken0) {
             amount0 = (lpAmount * reserve0) / lpTotalSupply;
-            amount1 = _getAmountOut(router, (lpAmount * reserve1) / lpTotalSupply, reserve1, reserve0);
+            amount1 = _getAmountOut(
+                router,
+                (lpAmount * reserve1) / lpTotalSupply,
+                reserve1, reserve0,
+                pair.token1(), pair.token0()
+            );
         } else {
-            amount0 = _getAmountOut(router, (lpAmount * reserve0) / lpTotalSupply, reserve0, reserve1);
+            amount0 = _getAmountOut(
+                router,
+                (lpAmount * reserve0) / lpTotalSupply,
+                reserve0, reserve1,
+                pair.token0(), pair.token1()
+            );
             amount1 = (lpAmount * reserve1) / lpTotalSupply;
         }
 
@@ -260,7 +282,14 @@ contract WidoZapperUniswapV2 {
     }
 
     /// @dev This function computes the amount out for a certain amount in
-    function _getAmountOut(IUniswapV2Router02 router, uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
+    function _getAmountOut(
+        IUniswapV2Router02 router,
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut,
+        address, //tokenIn
+        address //tokenOut
+    )
     internal pure virtual
     returns (uint256 amountOut) {
         return router.getAmountOut(amountIn, reserveIn, reserveOut);
