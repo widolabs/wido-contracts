@@ -134,7 +134,7 @@ contract WidoZapperUniswapV2 {
         }
 
         _approveTokenIfNeeded(path[0], address(router));
-        uint256[] memory swapedAmounts = _swap(
+        uint256[] memory swappedAmounts = _swap(
             router,
             swapAmountIn,
             path,
@@ -146,8 +146,8 @@ contract WidoZapperUniswapV2 {
             router,
             path[0],
             path[1],
-            fullInvestment.sub(swapedAmounts[0]),
-            swapedAmounts[1],
+            fullInvestment.sub(swappedAmounts[0]),
+            swappedAmounts[1],
             extra
         );
 

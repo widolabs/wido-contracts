@@ -5,9 +5,9 @@ import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../contracts/core/WidoZapperUniswapV2.sol";
-import "../compound/ForkTest.sol";
+import "../shared/MainnetForkTest.sol";
 
-contract WidoZapperUniswapV2Test is ForkTest {
+contract WidoZapperUniswapV2Test is MainnetForkTest {
     using SafeMath for uint256;
 
     WidoZapperUniswapV2 zapper;
