@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../shared/MainnetForkTest.sol";
 import "../../contracts/core/WidoZapperVerse.sol";
 
-contract WidoZapperUniswapV2Test is MainnetForkTest {
+contract WidoZapperVerseTest is MainnetForkTest {
     using SafeMath for uint256;
 
     WidoZapperVerse zapper;
@@ -118,7 +118,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
             fromAsset,
             amount
         )
-        .mul(1001)
+        .mul(1002)
         .div(1000);
 
         vm.startPrank(user1);

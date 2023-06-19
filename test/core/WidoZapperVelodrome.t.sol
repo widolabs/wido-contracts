@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../shared/OptimismForkTest.sol";
 import "../../contracts/core/WidoZapperVelodrome.sol";
 
-contract WidoZapperUniswapV2Test is OptimismForkTest {
+contract WidoZapperVelodromeTest is OptimismForkTest {
     using SafeMath for uint256;
 
     WidoZapperVelodrome zapper;

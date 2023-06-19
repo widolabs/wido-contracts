@@ -117,7 +117,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
             fromAsset,
             amount
         )
-        .mul(1001)
+        .mul(1002)
         .div(1000);
 
         vm.startPrank(user1);
