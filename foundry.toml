@@ -21,5 +21,6 @@ polygon = { key = "${POLYGONSCAN_API_KEY}", url = "https://api.polygonscan.com/a
 
 [rpc_endpoints]
 mainnet = "${ETH_NODE_URI_MAINNET}"
+optimism = "${ETH_NODE_URI_OPTIMISM}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
