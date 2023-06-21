@@ -96,11 +96,10 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
     )
     internal virtual override
     returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
-        bool stable = abi.decode(extra, (bool));
         return VelodromeRouter(address(router)).addLiquidity(
             tokenA,
             tokenB,
-            stable,
+            abi.decode(extra, (bool)), // stable
             amountADesired,
             amountBDesired,
             1,
