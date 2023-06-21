@@ -4,8 +4,8 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../shared/MainnetForkTest.sol";
-import "../../contracts/core/WidoZapperVerse.sol";
+import "../../shared/MainnetForkTest.sol";
+import "../../../contracts/core/zapper/WidoZapperVerse.sol";
 
 contract WidoZapperVerseTest is MainnetForkTest {
     using SafeMath for uint256;
