@@ -27,6 +27,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
 
     function test_zapUSDCForLP() public {
         /** Arrange */
+
         uint256 amount = 150_000_000;
         address fromAsset = USDC;
         address toAsset = USDC_WETH_LP;
@@ -46,6 +47,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
 
     function test_zapWETHForLP() public {
         /** Arrange */
+
         uint256 amount = 0.5 ether;
         address fromAsset = WETH;
         address toAsset = USDC_WETH_LP;
@@ -65,6 +67,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
 
     function test_zapLPForUSDC() public {
         /** Arrange */
+
         _zapIn(zapper, USDC, 150_000_000);
 
         address fromAsset = USDC_WETH_LP;
@@ -86,6 +89,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
 
     function test_zapLPForWETH() public {
         /** Arrange */
+
         _zapIn(zapper, WETH, 0.5 ether);
 
         address fromAsset = USDC_WETH_LP;
@@ -107,6 +111,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
 
     function test_revertWhen_zapWETHForLP_HasHighSlippage() public {
         /** Arrange */
+
         uint256 amount = 0.5 ether;
         address fromAsset = WETH;
         deal(fromAsset, user1, amount);
@@ -140,6 +145,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
 
     function test_revertWhen_zapWETHForLP_NoApproval() public {
         /** Arrange */
+
         uint256 amount = 0.5 ether;
         address fromAsset = WETH;
         deal(fromAsset, user1, amount);
@@ -171,6 +177,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
 
     function test_revertWhen_zapLPForWETH_NoBalance() public {
         /** Arrange */
+
         address fromAsset = USDC_WETH_LP;
         address toAsset = WETH;
         uint256 amount = 1 ether;
