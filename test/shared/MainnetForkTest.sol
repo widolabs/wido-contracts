@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
 import "../../contracts/core/interfaces/IWidoTokenManager.sol";
 
-abstract contract ForkTest is Test {
+abstract contract MainnetForkTest is Test {
     IWidoTokenManager widoTokenManager = IWidoTokenManager(0xF2F02200aEd0028fbB9F183420D3fE6dFd2d3EcD);
     IWidoRouter widoRouter = IWidoRouter(0x7Fb69e8fb1525ceEc03783FFd8a317bafbDfD394);
 
@@ -14,4 +14,13 @@ abstract contract ForkTest is Test {
     address constant USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
 
     address user1 = vm.addr(1);
+
+    function setUpBase() public {
+        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
+        vm.selectFork(forkId);
+
+        vm.label(USDC, "USDC");
+        vm.label(WETH, "WETH");
+        vm.label(WBTC, "WBTC");
+    }
 }

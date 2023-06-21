@@ -6,14 +6,14 @@ import "forge-std/StdUtils.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./mocks/MockSwap.sol";
 import "./interfaces/ICometTest.sol";
-import "./ForkTest.sol";
+import "../shared/MainnetForkTest.sol";
 import "../../contracts/compound/interfaces/IComet.sol";
 import "../../contracts/compound/interfaces/IWidoCollateralSwap.sol";
 import "../../contracts/compound/libraries/LibCollateralSwap.sol";
 import "../../contracts/compound/WidoCollateralSwap_Aave.sol";
 import "../../contracts/compound/WidoCollateralSwap_ERC3156.sol";
 
-contract WidoCollateralSwapTest is ForkTest {
+contract WidoCollateralSwapTest is MainnetForkTest {
     using SafeMath for uint256;
     WidoCollateralSwap_Aave widoCollateralSwap_Aave;
     WidoCollateralSwap_ERC3156 widoCollateralSwap_Equalizer;
@@ -37,8 +37,7 @@ contract WidoCollateralSwapTest is ForkTest {
     event WithdrawCollateral(address indexed src, address indexed to, address indexed asset, uint amount);
 
     function setUp() public {
-        uint256 forkId = vm.createFork(vm.rpcUrl("mainnet"));
-        vm.selectFork(forkId);
+        setUpBase();
 
         // Create different contracts instances
         widoCollateralSwap_Aave = new WidoCollateralSwap_Aave(

@@ -1,7 +1,7 @@
 import {HardhatRuntimeEnvironment} from "hardhat/types";
 import {DeployFunction} from "hardhat-deploy/types";
 import erc20ABI from "../abi/erc20.json";
-import {USDC_MAP} from "../test/utils/addresses";
+import {USDC_MAP} from "../test/core/utils/addresses";
 import {ChainName} from "wido";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
