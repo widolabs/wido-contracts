@@ -15,7 +15,9 @@ pragma solidity 0.8.7;
 import "./WidoZapperUniswapV2.sol";
 
 interface CamelotRouter {
-    function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
+    function getAmountsOut(uint amountIn, address[] calldata path) external pure returns (uint[] memory amounts);
+
+    function quote(uint amountA, uint reserveA, uint reserveB) external pure returns (uint amountB);
 
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint amountIn,
@@ -50,5 +52,17 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
             block.timestamp
         );
     }
-
+    /// @dev This function computes the amount out for a certain amount in
+    function _getAmountOut(
+        IUniswapV2Router02 router,
+        uint256 amountIn,
+        uint256 reserveIn,
+        uint256 reserveOut,
+        address, // tokenIn,
+        address // tokenOut
+    )
+    internal pure virtual override
+    returns (uint256) {
+        return CamelotRouter(address(router)).quote(amountIn, reserveIn, reserveOut);
+    }
 }

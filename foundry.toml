@@ -23,5 +23,6 @@ arbitrum = { key = "${ARBISCAN_API_KEY}", url = "https://api.arbiscan.io/api" }
 [rpc_endpoints]
 mainnet = "${ETH_NODE_URI_MAINNET}"
 optimism = "${ETH_NODE_URI_OPTIMISM}"
+arbitrum = "${ETH_NODE_URI_ARBITRUM}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
