@@ -30,12 +30,12 @@ contract CamelotNftHandler is IERC721Receiver {
         return this.onERC721Received.selector;
     }
 
-    function deposit(address nftPool, IERC20 lpToken, uint256 amount, address recipient) external {
-        IERC20(lpToken).safeTransferFrom(msg.sender, address(this), amount);
-        IERC20(lpToken).safeApprove(nftPool, amount);
-        NFTPool(nftPool).createPosition(amount, 0);
-        uint256 tokenId = NFTPool(nftPool).lastTokenId();
-        NFTPool(nftPool).safeTransferFrom(address(this), recipient, tokenId, bytes(""));
+    function deposit(NFTPool nftPool, IERC20 lpToken, uint256 amount, address recipient) external {
+        lpToken.safeTransferFrom(msg.sender, address(this), amount);
+        lpToken.safeApprove(address(nftPool), amount);
+        nftPool.createPosition(amount, 0);
+        uint256 tokenId = nftPool.lastTokenId();
+        nftPool.safeTransferFrom(address(this), recipient, tokenId, bytes(""));
     }
 
     //function withdraw(address nftPool, IERC20 lpToken, uint256 amount, address recipient) external {
