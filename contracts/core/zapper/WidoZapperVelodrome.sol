@@ -75,15 +75,13 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        uint256, //reserveIn
-        uint256, //reserveOut
-        address tokenIn,
-        address tokenOut,
+        Asset memory assetIn,
+        Asset memory assetOut,
         bytes memory //extra
     )
     internal pure virtual override
     returns (uint256 amountOut) {
-        (amountOut,) = VelodromeRouter(address(router)).getAmountOut(amountIn, tokenIn, tokenOut);
+        (amountOut,) = VelodromeRouter(address(router)).getAmountOut(amountIn, assetIn.token, assetOut.token);
     }
 
     /// @dev This function adds liquidity into the pool
