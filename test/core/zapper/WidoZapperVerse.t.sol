@@ -120,7 +120,8 @@ contract WidoZapperVerseTest is MainnetForkTest {
             IUniswapV2Router02(VERSE_ROUTER),
             IUniswapV2Pair(USDC_WETH_LP),
             fromAsset,
-            amount
+            amount,
+            bytes("")
         )
         .mul(1002)
         .div(1000);
@@ -154,7 +155,8 @@ contract WidoZapperVerseTest is MainnetForkTest {
             IUniswapV2Router02(VERSE_ROUTER),
             IUniswapV2Pair(USDC_WETH_LP),
             fromAsset,
-            amount
+            amount,
+            bytes("")
         )
         .mul(998)
         .div(1000);
@@ -186,7 +188,8 @@ contract WidoZapperVerseTest is MainnetForkTest {
             IUniswapV2Router02(VERSE_ROUTER),
             IUniswapV2Pair(USDC_WETH_LP),
             toAsset,
-            amount
+            amount,
+            bytes("")
         )
         .mul(998)
         .div(1000);
@@ -221,7 +224,8 @@ contract WidoZapperVerseTest is MainnetForkTest {
             IUniswapV2Router02(VERSE_ROUTER),
             IUniswapV2Pair(USDC_WETH_LP),
             _fromAsset,
-            _amountIn
+            _amountIn,
+            bytes("")
         )
         .mul(998)
         .div(1000);
@@ -247,7 +251,8 @@ contract WidoZapperVerseTest is MainnetForkTest {
             IUniswapV2Router02(VERSE_ROUTER),
             IUniswapV2Pair(USDC_WETH_LP),
             _toAsset,
-            _amountIn
+            _amountIn,
+            bytes("")
         )
         .mul(998)
         .div(1000);

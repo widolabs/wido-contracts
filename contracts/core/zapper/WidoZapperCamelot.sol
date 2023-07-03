@@ -59,7 +59,8 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
         uint256 reserveIn,
         uint256 reserveOut,
         address, // tokenIn,
-        address // tokenOut
+        address, // tokenOut
+        bytes memory //extra
     )
     internal pure virtual override
     returns (uint256) {

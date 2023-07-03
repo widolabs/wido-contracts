@@ -37,7 +37,8 @@ contract WidoZapperUniswapV2 is WidoZapper {
         uint256 reserveIn,
         uint256 reserveOut,
         address, //tokenIn
-        address //tokenOut
+        address, //tokenOut
+        bytes memory //extra
     )
     internal pure virtual override
     returns (uint256 amountOut) {

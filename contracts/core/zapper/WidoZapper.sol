@@ -78,7 +78,8 @@ abstract contract WidoZapper {
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address fromToken,
-        uint256 amount
+        uint256 amount,
+        bytes calldata extra
     ) external view returns (uint256 minToToken) {
         address token0 = pair.token0();
         address token1 = pair.token1();
@@ -96,10 +97,10 @@ abstract contract WidoZapper {
 
         if (isZapFromToken0) {
             halfAmount0 = amount / 2;
-            halfAmount1 = _getAmountOut(router, halfAmount0, reserve0, reserve1, token0, token1);
+            halfAmount1 = _getAmountOut(router, halfAmount0, reserve0, reserve1, token0, token1, extra);
         } else {
             halfAmount1 = amount / 2;
-            halfAmount0 = _getAmountOut(router, halfAmount1, reserve1, reserve0, token1, token0);
+            halfAmount0 = _getAmountOut(router, halfAmount1, reserve1, reserve0, token1, token0, extra);
         }
 
         uint256 amount0 = balance0 + halfAmount0 - reserve0;
@@ -118,7 +119,8 @@ abstract contract WidoZapper {
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address toToken,
-        uint256 lpAmount
+        uint256 lpAmount,
+        bytes calldata extra
     ) external view returns (uint256 minToToken) {
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
         uint256 lpTotalSupply = pair.totalSupply();
@@ -135,14 +137,16 @@ abstract contract WidoZapper {
                 router,
                 (lpAmount * reserve1) / lpTotalSupply,
                 reserve1, reserve0,
-                pair.token1(), pair.token0()
+                pair.token1(), pair.token0(),
+                extra
             );
         } else {
             amount0 = _getAmountOut(
                 router,
                 (lpAmount * reserve0) / lpTotalSupply,
                 reserve0, reserve1,
-                pair.token0(), pair.token1()
+                pair.token0(), pair.token1(),
+                extra
             );
             amount1 = (lpAmount * reserve1) / lpTotalSupply;
         }
@@ -209,18 +213,20 @@ abstract contract WidoZapper {
         uint256 fullInvestment = IERC20(fromToken).balanceOf(address(this));
         uint256 swapAmountIn;
         if (isInputA) {
-            swapAmountIn = _getSwapAmount(
+            swapAmountIn = _getAmountBToSwap(
                 router,
                 fullInvestment,
                 reserveA, reserveB,
-                pair.token0(), pair.token1()
+                pair.token0(), pair.token1(),
+                extra
             );
         } else {
-            swapAmountIn = _getSwapAmount(
+            swapAmountIn = _getAmountBToSwap(
                 router,
                 fullInvestment,
                 reserveB, reserveA,
-                pair.token1(), pair.token0()
+                pair.token1(), pair.token0(),
+                extra
             );
         }
 
@@ -245,18 +251,19 @@ abstract contract WidoZapper {
         return poolTokenAmount;
     }
 
-    function _getSwapAmount(
+    function _getAmountBToSwap(
         IUniswapV2Router02 router,
         uint256 investmentA,
         uint256 reserveA,
         uint256 reserveB,
         address tokenA,
-        address tokenB
+        address tokenB,
+        bytes memory extra
     )
     internal pure
     returns (uint256 swapAmount) {
         uint256 halfInvestment = investmentA / 2;
-        uint256 nominator = _getAmountOut(router, halfInvestment, reserveA, reserveB, tokenA, tokenB);
+        uint256 nominator = _getAmountOut(router, halfInvestment, reserveA, reserveB, tokenA, tokenB, extra);
         uint256 denominator = _quote(router, halfInvestment, reserveA.add(halfInvestment), reserveB.sub(nominator));
         swapAmount = investmentA.sub(Babylonian.sqrt((halfInvestment * halfInvestment * nominator) / denominator));
     }
@@ -284,8 +291,9 @@ abstract contract WidoZapper {
         uint256 amountIn,
         uint256 reserveIn,
         uint256 reserveOut,
-        address, //tokenIn
-        address //tokenOut
+        address tokenIn,
+        address tokenOut,
+        bytes memory extra
     )
     internal pure virtual
     returns (uint256 amountOut);
@@ -297,7 +305,7 @@ abstract contract WidoZapper {
         address tokenB,
         uint amountADesired,
         uint amountBDesired,
-        bytes memory //extra
+        bytes memory extra
     )
     internal virtual
     returns (uint256 amountA, uint256 amountB, uint256 liquidity);
@@ -307,7 +315,7 @@ abstract contract WidoZapper {
         IUniswapV2Router02 router,
         uint256 amountIn,
         address[] memory path,
-        bytes memory //extra
+        bytes memory extra
     )
     internal virtual
     returns (uint256[] memory amounts);
