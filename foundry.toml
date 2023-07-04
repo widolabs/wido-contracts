@@ -25,5 +25,6 @@ optimism = { key = "${OPTIMISTIC_API_KEY}", url = "https://api-optimistic.ethers
 mainnet = "${ETH_NODE_URI_MAINNET}"
 optimism = "${ETH_NODE_URI_OPTIMISM}"
 arbitrum = "${ETH_NODE_URI_ARBITRUM}"
+polygon = "${ETH_NODE_URI_POLYGON}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
