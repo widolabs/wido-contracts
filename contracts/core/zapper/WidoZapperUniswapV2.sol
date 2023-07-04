@@ -25,6 +25,11 @@ contract WidoZapperUniswapV2 {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    struct Asset {
+        uint256 reserves;
+        address token;
+    }
+
     /// @notice Add liquidity to an Uniswap V2 pool using one of the pool tokens
     /// @param router Address of the UniswapV2Router02 contract
     /// @param pair Address of the pair contract to add liquidity into
@@ -79,33 +84,35 @@ contract WidoZapperUniswapV2 {
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address fromToken,
-        uint256 amount
+        uint256 amount,
+        bytes calldata extra
     ) external view returns (uint256 minToToken) {
-        address token0 = pair.token0();
-        address token1 = pair.token1();
-
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-        uint256 balance0 = IERC20(token0).balanceOf(address(pair));
-        uint256 balance1 = IERC20(token1).balanceOf(address(pair));
-        uint256 lpTotalSupply = pair.totalSupply();
+        Asset memory asset0 = Asset(reserve0, pair.token0());
+        Asset memory asset1 = Asset(reserve1, pair.token1());
 
-        bool isZapFromToken0 = token0 == fromToken;
-        require(isZapFromToken0 || token1 == fromToken, "Input token not present in liquidity pair");
+        // checking initial balance into `amount`, will be reusing the slot
+        uint256 amount0 = IERC20(asset0.token).balanceOf(address(pair));
+        uint256 amount1 = IERC20(asset1.token).balanceOf(address(pair));
+
+        require(asset0.token == fromToken || asset1.token == fromToken, "Input token not present in liquidity pair");
 
         uint256 halfAmount0;
         uint256 halfAmount1;
 
-        if (isZapFromToken0) {
+        // stack too deep, so we can't store this bool
+        if (asset0.token == fromToken) {
             halfAmount0 = amount / 2;
-            halfAmount1 = _getAmountOut(router, halfAmount0, reserve0, reserve1, token0, token1);
+            halfAmount1 = _getAmountOut(router, halfAmount0, asset0, asset1, extra);
         } else {
             halfAmount1 = amount / 2;
-            halfAmount0 = _getAmountOut(router, halfAmount1, reserve1, reserve0, token1, token0);
+            halfAmount0 = _getAmountOut(router, halfAmount1, asset1, asset0, extra);
         }
 
-        uint256 amount0 = balance0 + halfAmount0 - reserve0;
-        uint256 amount1 = balance1 + halfAmount1 - reserve1;
+        amount0 = amount0 + halfAmount0 - reserve0;
+        amount1 = amount1 + halfAmount1 - reserve1;
 
+        uint256 lpTotalSupply = pair.totalSupply();
         return Math.min(amount0.mul(lpTotalSupply) / reserve0, amount1.mul(lpTotalSupply) / reserve1);
     }
 
@@ -119,9 +126,10 @@ contract WidoZapperUniswapV2 {
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address toToken,
-        uint256 lpAmount
+        uint256 lpAmount,
+        bytes calldata extra
     ) external view returns (uint256 minToToken) {
-        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
+        (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
         uint256 lpTotalSupply = pair.totalSupply();
 
         bool isZapToToken0 = pair.token0() == toToken;
@@ -129,21 +137,23 @@ contract WidoZapperUniswapV2 {
 
         uint256 amount0;
         uint256 amount1;
+        Asset memory asset0 = Asset(reserve0, pair.token0());
+        Asset memory asset1 = Asset(reserve1, pair.token1());
 
         if (isZapToToken0) {
             amount0 = (lpAmount * reserve0) / lpTotalSupply;
             amount1 = _getAmountOut(
                 router,
                 (lpAmount * reserve1) / lpTotalSupply,
-                reserve1, reserve0,
-                pair.token1(), pair.token0()
+                asset1, asset0,
+                extra
             );
         } else {
             amount0 = _getAmountOut(
                 router,
                 (lpAmount * reserve0) / lpTotalSupply,
-                reserve0, reserve1,
-                pair.token0(), pair.token1()
+                asset0, asset1,
+                extra
             );
             amount1 = (lpAmount * reserve1) / lpTotalSupply;
         }
@@ -210,18 +220,20 @@ contract WidoZapperUniswapV2 {
         uint256 fullInvestment = IERC20(fromToken).balanceOf(address(this));
         uint256 swapAmountIn;
         if (isInputA) {
-            swapAmountIn = _getSwapAmount(
+            swapAmountIn = _getAmountBToSwap(
                 router,
                 fullInvestment,
-                reserveA, reserveB,
-                pair.token0(), pair.token1()
+                Asset(reserveA, pair.token0()),
+                Asset(reserveB, pair.token1()),
+                extra
             );
         } else {
-            swapAmountIn = _getSwapAmount(
+            swapAmountIn = _getAmountBToSwap(
                 router,
                 fullInvestment,
-                reserveB, reserveA,
-                pair.token1(), pair.token0()
+                Asset(reserveB, pair.token1()),
+                Asset(reserveA, pair.token0()),
+                extra
             );
         }
 
@@ -246,17 +258,18 @@ contract WidoZapperUniswapV2 {
         return poolTokenAmount;
     }
 
-    function _getSwapAmount(
+    function _getAmountBToSwap(
         IUniswapV2Router02 router,
         uint256 investmentA,
-        uint256 reserveA,
-        uint256 reserveB,
-        address tokenA,
-        address tokenB
-    ) private pure returns (uint256 swapAmount) {
+        Asset memory assetA,
+        Asset memory assetB,
+        bytes memory extra
+    )
+    internal pure
+    returns (uint256 swapAmount) {
         uint256 halfInvestment = investmentA / 2;
-        uint256 nominator = _getAmountOut(router, halfInvestment, reserveA, reserveB, tokenA, tokenB);
-        uint256 denominator = _quote(router, halfInvestment, reserveA.add(halfInvestment), reserveB.sub(nominator));
+        uint256 nominator = _getAmountOut(router, halfInvestment, assetA, assetB, extra);
+        uint256 denominator = _quote(router, halfInvestment, assetA.reserves.add(halfInvestment), assetB.reserves.sub(nominator));
         swapAmount = investmentA.sub(Babylonian.sqrt((halfInvestment * halfInvestment * nominator) / denominator));
     }
 
@@ -285,14 +298,13 @@ contract WidoZapperUniswapV2 {
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        uint256 reserveIn,
-        uint256 reserveOut,
-        address, //tokenIn
-        address //tokenOut
+        Asset memory assetIn,
+        Asset memory assetOut,
+        bytes memory //extra
     )
     internal pure virtual
     returns (uint256 amountOut) {
-        return router.getAmountOut(amountIn, reserveIn, reserveOut);
+        return router.getAmountOut(amountIn, assetIn.reserves, assetOut.reserves);
     }
 
     /// @dev This function adds liquidity into the pool

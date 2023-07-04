@@ -120,9 +120,10 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             IUniswapV2Router02(VELO_ROUTER),
             IUniswapV2Pair(WBTC_USDC_LP),
             fromAsset,
-            amount
+            amount,
+            abi.encode(false)
         )
-        .mul(1001)
+        .mul(1500)
         .div(1000);
 
         vm.startPrank(user1);
@@ -139,7 +140,7 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             fromAsset,
             amount,
             minToToken,
-            bytes("")
+            abi.encode(false)
         );
     }
 
@@ -154,7 +155,8 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             IUniswapV2Router02(VELO_ROUTER),
             IUniswapV2Pair(WBTC_USDC_LP),
             fromAsset,
-            amount
+            amount,
+            abi.encode(false)
         )
         .mul(998)
         .div(1000);
@@ -171,7 +173,7 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             fromAsset,
             amount,
             minToToken,
-            bytes("")
+            abi.encode(false)
         );
     }
 
@@ -186,7 +188,8 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             IUniswapV2Router02(VELO_ROUTER),
             IUniswapV2Pair(WBTC_USDC_LP),
             toAsset,
-            amount
+            amount,
+            abi.encode(false)
         )
         .mul(998)
         .div(1000);
@@ -205,7 +208,7 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             amount,
             toAsset,
             minToToken,
-            bytes("")
+            abi.encode(false)
         );
     }
 
@@ -221,7 +224,8 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             IUniswapV2Router02(VELO_ROUTER),
             IUniswapV2Pair(WBTC_USDC_LP),
             _fromAsset,
-            _amountIn
+            _amountIn,
+            abi.encode(false)
         )
         .mul(998)
         .div(1000);
@@ -247,7 +251,8 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             IUniswapV2Router02(VELO_ROUTER),
             IUniswapV2Pair(WBTC_USDC_LP),
             _toAsset,
-            _amountIn
+            _amountIn,
+            bytes("")
         )
         .mul(998)
         .div(1000);

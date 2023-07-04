@@ -4,33 +4,35 @@ pragma solidity 0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../../shared/MainnetForkTest.sol";
-import "../../../contracts/core/zapper/WidoZapperVerse.sol";
+import "../../shared/OptimismForkTest.sol";
+import "../../../contracts/core/zapper/WidoZapperVelodromeV2.sol";
 
-contract WidoZapperVerseTest is MainnetForkTest {
+contract WidoZapperVelodromeV2Test is OptimismForkTest {
     using SafeMath for uint256;
 
-    WidoZapperVerse zapper;
+    WidoZapperVelodromeV2 zapper;
 
-    address constant VERSE_ROUTER = address(0xB4B0ea46Fe0E9e8EAB4aFb765b527739F2718671);
-    address constant USDC_WETH_LP = address(0x6E1fbeeABA87BAe1100d95f8340dc27aD7C8427b);
+    address constant VELO_V2_ROUTER = address(0xa062aE8A9c5e11aaA026fc2670B0D65cCc8B2858);
+    address constant WTBT_USDC_LP = address(0x5e6E17F745fF620E87324b7c6ec672B5743BD0B4);
+    address constant WTBT = address(0xdb4eA87fF83eB1c80b8976FC47731Da6a31D35e5);
 
     function setUp() public {
         setUpBase();
 
-        zapper = new WidoZapperVerse();
+        zapper = new WidoZapperVelodromeV2();
         vm.label(address(zapper), "Zapper");
 
-        vm.label(VERSE_ROUTER, "VERSE_ROUTER");
-        vm.label(USDC_WETH_LP, "USDC_WETH_LP");
+        vm.label(VELO_V2_ROUTER, "VELO_V2_ROUTER");
+        vm.label(WTBT_USDC_LP, "WTBT_USDC_LP");
+        vm.label(WTBT, "WTBT");
     }
 
     function test_zapUSDCForLP() public {
         /** Arrange */
 
-        uint256 amount = 150_000_000;
+        uint256 amount = 50_000_000;
         address fromAsset = USDC;
-        address toAsset = USDC_WETH_LP;
+        address toAsset = WTBT_USDC_LP;
 
         /** Act */
 
@@ -45,12 +47,12 @@ contract WidoZapperVerseTest is MainnetForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapWETHForLP() public {
+    function test_zapWTBTForLP() public {
         /** Arrange */
 
-        uint256 amount = 0.5 ether;
-        address fromAsset = WETH;
-        address toAsset = USDC_WETH_LP;
+        uint256 amount = 1e18;
+        address fromAsset = WTBT;
+        address toAsset = WTBT_USDC_LP;
 
         /** Act */
 
@@ -68,9 +70,9 @@ contract WidoZapperVerseTest is MainnetForkTest {
     function test_zapLPForUSDC() public {
         /** Arrange */
 
-        _zapIn(zapper, USDC, 150_000_000);
+        _zapIn(zapper, USDC, 50_000_000);
 
-        address fromAsset = USDC_WETH_LP;
+        address fromAsset = WTBT_USDC_LP;
         address toAsset = USDC;
         uint256 amount = IERC20(fromAsset).balanceOf(user1);
 
@@ -87,13 +89,13 @@ contract WidoZapperVerseTest is MainnetForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapLPForWETH() public {
+    function test_zapLPForWTBT() public {
         /** Arrange */
 
-        _zapIn(zapper, WETH, 0.5 ether);
+        _zapIn(zapper, WTBT, 1e18);
 
-        address fromAsset = USDC_WETH_LP;
-        address toAsset = WETH;
+        address fromAsset = WTBT_USDC_LP;
+        address toAsset = WTBT;
         uint256 amount = IERC20(fromAsset).balanceOf(user1);
 
         /** Act */
@@ -109,21 +111,21 @@ contract WidoZapperVerseTest is MainnetForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_revertWhen_zapWETHForLP_HasHighSlippage() public {
+    function test_revertWhen_zapWTBTForLP_HasHighSlippage() public {
         /** Arrange */
 
-        uint256 amount = 0.5 ether;
-        address fromAsset = WETH;
+        uint256 amount = 200_000;
+        address fromAsset = WTBT;
         deal(fromAsset, user1, amount);
 
         uint256 minToToken = zapper.calcMinToAmountForZapIn(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             fromAsset,
             amount,
-            bytes("")
+            abi.encode(false)
         )
-        .mul(1002)
+        .mul(1001)
         .div(1000);
 
         vm.startPrank(user1);
@@ -135,28 +137,28 @@ contract WidoZapperVerseTest is MainnetForkTest {
         vm.expectRevert();
 
         zapper.zapIn(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             fromAsset,
             amount,
             minToToken,
-            bytes("")
+            abi.encode(false)
         );
     }
 
-    function test_revertWhen_zapWETHForLP_NoApproval() public {
+    function test_revertWhen_zapWTBTForLP_NoApproval() public {
         /** Arrange */
 
-        uint256 amount = 0.5 ether;
-        address fromAsset = WETH;
+        uint256 amount = 200_000;
+        address fromAsset = WTBT;
         deal(fromAsset, user1, amount);
 
         uint256 minToToken = zapper.calcMinToAmountForZapIn(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             fromAsset,
             amount,
-            bytes("")
+            abi.encode(false)
         )
         .mul(998)
         .div(1000);
@@ -168,28 +170,28 @@ contract WidoZapperVerseTest is MainnetForkTest {
         vm.expectRevert();
 
         zapper.zapIn(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             fromAsset,
             amount,
             minToToken,
-            bytes("")
+            abi.encode(false)
         );
     }
 
-    function test_revertWhen_zapLPForWETH_NoBalance() public {
+    function test_revertWhen_zapLPForWTBT_NoBalance() public {
         /** Arrange */
 
-        address fromAsset = USDC_WETH_LP;
-        address toAsset = WETH;
+        address fromAsset = WTBT_USDC_LP;
+        address toAsset = WTBT;
         uint256 amount = 1 ether;
 
         uint256 minToToken = zapper.calcMinToAmountForZapOut(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             toAsset,
             amount,
-            bytes("")
+            abi.encode(false)
         )
         .mul(998)
         .div(1000);
@@ -203,12 +205,12 @@ contract WidoZapperVerseTest is MainnetForkTest {
         vm.expectRevert();
 
         zapper.zapOut(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             amount,
             toAsset,
             minToToken,
-            bytes("")
+            abi.encode(false)
         );
     }
 
@@ -221,23 +223,23 @@ contract WidoZapperVerseTest is MainnetForkTest {
         vm.startPrank(user1);
 
         minToToken = _zapper.calcMinToAmountForZapIn(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             _fromAsset,
             _amountIn,
-            bytes("")
+            abi.encode(false)
         )
         .mul(998)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
         _zapper.zapIn(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             _fromAsset,
             _amountIn,
             minToToken,
-            bytes("")
+            abi.encode(false)
         );
     }
 
@@ -248,23 +250,23 @@ contract WidoZapperVerseTest is MainnetForkTest {
         uint256 _amountIn
     ) internal returns (uint256 minToToken){
         minToToken = _zapper.calcMinToAmountForZapOut(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             _toAsset,
             _amountIn,
-            bytes("")
+            abi.encode(false)
         )
         .mul(998)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
         _zapper.zapOut(
-            IUniswapV2Router02(VERSE_ROUTER),
-            IUniswapV2Pair(USDC_WETH_LP),
+            IUniswapV2Router02(VELO_V2_ROUTER),
+            IUniswapV2Pair(WTBT_USDC_LP),
             _amountIn,
             _toAsset,
             minToToken,
-            bytes("")
+            abi.encode(false)
         );
     }
 }

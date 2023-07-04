@@ -120,7 +120,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             fromAsset,
-            amount
+            amount,
+            bytes("")
         )
         .mul(1002)
         .div(1000);
@@ -154,7 +155,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             fromAsset,
-            amount
+            amount,
+            bytes("")
         )
         .mul(998)
         .div(1000);
@@ -186,7 +188,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             toAsset,
-            amount
+            amount,
+            bytes("")
         )
         .mul(998)
         .div(1000);
@@ -221,7 +224,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             _fromAsset,
-            _amountIn
+            _amountIn,
+            bytes("")
         )
         .mul(996)
         .div(1000);
@@ -247,7 +251,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             _toAsset,
-            _amountIn
+            _amountIn,
+            bytes("")
         )
         .mul(998)
         .div(1000);
