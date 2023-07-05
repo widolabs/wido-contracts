@@ -20,11 +20,13 @@ mainnet = { key = "${ETHERSCAN_MAINNET_KEY}" }
 polygon = { key = "${POLYGONSCAN_API_KEY}", url = "https://api.polygonscan.com/api" }
 arbitrum = { key = "${ARBISCAN_API_KEY}", url = "https://api.arbiscan.io/api" }
 optimism = { key = "${OPTIMISTIC_API_KEY}", url = "https://api-optimistic.etherscan.io/api" }
+bsc = { key = "${BSCSCAN_API_KEY}", url = "https://api.bscscan.com/api" }
 
 [rpc_endpoints]
 mainnet = "${ETH_NODE_URI_MAINNET}"
 optimism = "${ETH_NODE_URI_OPTIMISM}"
 arbitrum = "${ETH_NODE_URI_ARBITRUM}"
 polygon = "${ETH_NODE_URI_POLYGON}"
+bsc = "${ETH_NODE_URI_BSC}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
