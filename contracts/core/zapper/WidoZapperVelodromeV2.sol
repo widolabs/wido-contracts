@@ -71,15 +71,16 @@ contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        address[] memory path,
+        address tokenIn,
+        address tokenOut,
         bytes memory extra
     )
     internal virtual override
     returns (uint256[] memory amounts) {
         VelodromeV2Router.Route[] memory routes = new VelodromeV2Router.Route[](1);
         routes[0] = VelodromeV2Router.Route({
-            from : path[0],
-            to : path[1],
+            from : tokenIn,
+            to : tokenOut,
             stable : abi.decode(extra, (bool)),
             factory : address(0)  // we can use address(0), defaultFactory will be used
         });

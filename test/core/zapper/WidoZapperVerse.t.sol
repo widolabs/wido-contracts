@@ -123,7 +123,7 @@ contract WidoZapperVerseTest is MainnetForkTest {
             amount,
             bytes("")
         )
-        .mul(1002)
+        .mul(1005)
         .div(1000);
 
         vm.startPrank(user1);

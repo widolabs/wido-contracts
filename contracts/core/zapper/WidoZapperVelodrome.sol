@@ -112,15 +112,16 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        address[] memory path,
+        address tokenIn,
+        address tokenOut,
         bytes memory extra
     )
     internal virtual override
     returns (uint256[] memory amounts) {
         VelodromeRouter.route[] memory routes = new VelodromeRouter.route[](1);
         routes[0] = VelodromeRouter.route({
-            from : path[0],
-            to : path[1],
+            from : tokenIn,
+            to : tokenOut,
             stable : abi.decode(extra, (bool))
         });
         return VelodromeRouter(address(router)).swapExactTokensForTokens(

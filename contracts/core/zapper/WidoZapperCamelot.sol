@@ -37,11 +37,15 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        address[] memory path,
+        address tokenIn,
+        address tokenOut,
         bytes memory //extra
     )
     internal virtual override
     returns (uint256[] memory amounts) {
+        address[] memory path = new address[](2);
+        path[0] = tokenIn;
+        path[1] = tokenOut;
         amounts = CamelotRouter(address(router)).getAmountsOut(amountIn, path);
         CamelotRouter(address(router)).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             amountIn,

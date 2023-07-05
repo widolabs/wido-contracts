@@ -178,19 +178,16 @@ abstract contract WidoZapper {
         );
         pair.burn(address(this));
 
-        address swapToken = token1 == toToken
+        address fromToken = token1 == toToken
         ? token0
         : token1;
 
-        address[] memory path = new address[](2);
-        path[0] = swapToken;
-        path[1] = toToken;
-
-        _approveTokenIfNeeded(path[0], address(router));
+        _approveTokenIfNeeded(fromToken, address(router));
         _swap(
             router,
-            IERC20(swapToken).balanceOf(address(this)),
-            path,
+            IERC20(fromToken).balanceOf(address(this)),
+            fromToken,
+            toToken,
             extra
         );
 
@@ -200,55 +197,27 @@ abstract contract WidoZapper {
     function _swapAndAddLiquidity(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
-        address fromToken,
+        address tokenA,
         bytes memory extra
     ) private returns (uint256) {
         _requires(router, pair);
 
-        (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
+        bool isInputA = pair.token0() == tokenA;
+        require(isInputA || pair.token1() == tokenA, "Input token not present in liquidity pair");
 
-        bool isInputA = pair.token0() == fromToken;
-        require(isInputA || pair.token1() == fromToken, "Input token not present in liquidity pair");
-
-        address[] memory path = new address[](2);
-        path[0] = fromToken;
-        path[1] = isInputA
+        address tokenB = isInputA
         ? pair.token1()
         : pair.token0();
 
-        uint256 fullInvestment = IERC20(fromToken).balanceOf(address(this));
-        uint256 swapAmountIn;
-        if (isInputA) {
-            swapAmountIn = _getAmountBToSwap(
-                router,
-                fullInvestment,
-                Asset(reserveA, pair.token0()),
-                Asset(reserveB, pair.token1()),
-                extra
-            );
-        } else {
-            swapAmountIn = _getAmountBToSwap(
-                router,
-                fullInvestment,
-                Asset(reserveB, pair.token1()),
-                Asset(reserveA, pair.token0()),
-                extra
-            );
-        }
+        uint256 fullInvestment = IERC20(tokenA).balanceOf(address(this));
 
-        _approveTokenIfNeeded(path[0], address(router));
-        uint256[] memory swappedAmounts = _swap(
-            router,
-            swapAmountIn,
-            path,
-            extra
-        );
+        uint256[] memory swappedAmounts = _balanceAssets(router, pair, fullInvestment, tokenA, tokenB, extra);
 
-        _approveTokenIfNeeded(path[1], address(router));
+        _approveTokenIfNeeded(tokenB, address(router));
         (, , uint256 poolTokenAmount) = _addLiquidity(
             router,
-            path[0],
-            path[1],
+            tokenA,
+            tokenB,
             fullInvestment.sub(swappedAmounts[0]),
             swappedAmounts[1],
             extra
@@ -257,22 +226,7 @@ abstract contract WidoZapper {
         return poolTokenAmount;
     }
 
-    function _getAmountBToSwap(
-        IUniswapV2Router02 router,
-        uint256 investmentA,
-        Asset memory assetA,
-        Asset memory assetB,
-        bytes memory extra
-    )
-    internal pure
-    returns (uint256 swapAmount) {
-        uint256 halfInvestment = investmentA / 2;
-        uint256 nominator = _getAmountOut(router, halfInvestment, assetA, assetB, extra);
-        uint256 denominator = _quote(router, halfInvestment, assetA.reserves.add(halfInvestment), assetB.reserves.sub(nominator));
-        swapAmount = investmentA.sub(Babylonian.sqrt((halfInvestment * halfInvestment * nominator) / denominator));
-    }
-
-    function _approveTokenIfNeeded(address token, address spender) private {
+    function _approveTokenIfNeeded(address token, address spender) internal {
         if (IERC20(token).allowance(address(this), spender) == 0) {
             IERC20(token).safeApprove(spender, type(uint256).max);
         }
@@ -280,16 +234,16 @@ abstract contract WidoZapper {
 
     /** Virtual functions */
 
-    /// @dev This function checks that the pair belongs to the factory
+    /// @dev Checks that the pair belongs to the factory
     function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair)
     internal virtual;
 
-    /// @dev This function quotes the expected amountB given a certain amountA, while the pool has the specified reserves
+    /// @dev Quotes the expected amountB given a certain amountA, while the pool has the specified reserves
     function _quote(IUniswapV2Router02 router, uint256 amountA, uint256 reserveA, uint256 reserveB)
     internal pure virtual
     returns (uint256 amountB);
 
-    /// @dev This function computes the amount out for a certain amount in
+    /// @dev Computes the max amount out given the amount in
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,
@@ -300,7 +254,7 @@ abstract contract WidoZapper {
     internal pure virtual
     returns (uint256 amountOut);
 
-    /// @dev This function adds liquidity into the pool
+    /// @dev Adds liquidity into the pool
     function _addLiquidity(
         IUniswapV2Router02 router,
         address tokenA,
@@ -312,12 +266,25 @@ abstract contract WidoZapper {
     internal virtual
     returns (uint256 amountA, uint256 amountB, uint256 liquidity);
 
-    /// @dev This function swap amountIn through the path
+    /// @dev Re-balances the full investment into tokenA and tokenB
+    function _balanceAssets(
+        IUniswapV2Router02 router,
+        IUniswapV2Pair pair,
+        uint256 fullInvestment,
+        address tokenA,
+        address tokenB,
+        bytes memory extra
+    )
+    internal virtual
+    returns (uint256[] memory amounts);
+
+    /// @dev Swaps tokenIn into tokenB
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        address[] memory path,
-        bytes memory //extra
+        address tokenIn,
+        address tokenOut,
+        bytes memory extra
     )
     internal virtual
     returns (uint256[] memory amounts);
