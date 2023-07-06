@@ -10,6 +10,7 @@ remappings = [
     "hardhat-deploy/=node_modules/hardhat-deploy/",
     "hardhat/=node_modules/hardhat/",
     "solmate/=node_modules/solmate/",
+    "@cryptoalgebra/=lib/Algebra/src/",
 ]
 #libraries = [
 #  "contracts/compound/libraries/LibCollateralSwap.sol:LibCollateralSwap:0x8D650E711df1742292266b82e97D15FC7DFbDd13"
