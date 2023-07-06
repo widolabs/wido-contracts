@@ -94,8 +94,8 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
         bytes memory extra
     )
     internal virtual override
-    returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
-        return VelodromeRouter(address(router)).addLiquidity(
+    returns (uint256 liquidity) {
+        (,, liquidity) = VelodromeRouter(address(router)).addLiquidity(
             tokenA,
             tokenB,
             abi.decode(extra, (bool)), // stable
@@ -117,19 +117,20 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
         bytes memory extra
     )
     internal virtual override
-    returns (uint256[] memory amounts) {
+    returns (uint256 amountOut) {
         VelodromeRouter.route[] memory routes = new VelodromeRouter.route[](1);
-        routes[0] = VelodromeRouter.route({
+            routes[0] = VelodromeRouter.route({
             from : tokenIn,
             to : tokenOut,
             stable : abi.decode(extra, (bool))
         });
-        return VelodromeRouter(address(router)).swapExactTokensForTokens(
+        uint256[] memory amounts = VelodromeRouter(address(router)).swapExactTokensForTokens(
             amountIn,
             1,
             routes,
             address(this),
             block.timestamp
         );
+        amountOut = amounts[1];
     }
 }

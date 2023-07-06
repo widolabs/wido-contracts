@@ -10,7 +10,7 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
 
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@uniswap/lib/contracts/libraries/Babylonian.sol";
@@ -209,17 +209,15 @@ abstract contract WidoZapper {
         ? pair.token1()
         : pair.token0();
 
-        uint256 fullInvestment = IERC20(tokenA).balanceOf(address(this));
-
-        uint256[] memory swappedAmounts = _balanceAssets(router, pair, fullInvestment, tokenA, tokenB, extra);
+        uint256[] memory balancedAmounts = _balanceAssets(router, pair, tokenA, tokenB, extra);
 
         _approveTokenIfNeeded(tokenB, address(router));
-        (, , uint256 poolTokenAmount) = _addLiquidity(
+        uint256 poolTokenAmount = _addLiquidity(
             router,
             tokenA,
             tokenB,
-            fullInvestment.sub(swappedAmounts[0]),
-            swappedAmounts[1],
+            balancedAmounts[0],
+            balancedAmounts[1],
             extra
         );
 
@@ -238,22 +236,6 @@ abstract contract WidoZapper {
     function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair)
     internal virtual;
 
-    /// @dev Quotes the expected amountB given a certain amountA, while the pool has the specified reserves
-    function _quote(IUniswapV2Router02 router, uint256 amountA, uint256 reserveA, uint256 reserveB)
-    internal pure virtual
-    returns (uint256 amountB);
-
-    /// @dev Computes the max amount out given the amount in
-    function _getAmountOut(
-        IUniswapV2Router02 router,
-        uint256 amountIn,
-        Asset memory assetIn,
-        Asset memory assetOut,
-        bytes memory //extra
-    )
-    internal pure virtual
-    returns (uint256 amountOut);
-
     /// @dev Adds liquidity into the pool
     function _addLiquidity(
         IUniswapV2Router02 router,
@@ -264,19 +246,29 @@ abstract contract WidoZapper {
         bytes memory //extra
     )
     internal virtual
-    returns (uint256 amountA, uint256 amountB, uint256 liquidity);
+    returns (uint256 liquidity);
 
     /// @dev Re-balances the full investment into tokenA and tokenB
     function _balanceAssets(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
-        uint256 fullInvestment,
         address tokenA,
         address tokenB,
         bytes memory extra
     )
     internal virtual
     returns (uint256[] memory amounts);
+
+    /// @dev Computes the max amount out given the amount in
+    function _getAmountOut(
+        IUniswapV2Router02 router,
+        uint256 amountIn,
+        Asset memory assetIn,
+        Asset memory assetOut,
+        bytes memory //extra
+    )
+    internal view virtual
+    returns (uint256 amountOut);
 
     /// @dev Swaps tokenIn into tokenB
     function _swap(
@@ -287,5 +279,5 @@ abstract contract WidoZapper {
         bytes memory extra
     )
     internal virtual
-    returns (uint256[] memory amounts);
+    returns (uint256 amountOut);
 }

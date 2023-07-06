@@ -25,13 +25,6 @@ contract WidoZapperUniswapV2 is WidoZapper {
         require(pair.factory() == router.factory(), "Incompatible router and pair");
     }
 
-    /// @dev This function quotes the expected amountB given a certain amountA, while the pool has the specified reserves
-    function _quote(IUniswapV2Router02 router, uint256 amountA, uint256 reserveA, uint256 reserveB)
-    internal pure virtual override
-    returns (uint256 amountB) {
-        return router.quote(amountA, reserveA, reserveB);
-    }
-
     /// @dev This function adds liquidity into the pool
     function _addLiquidity(
         IUniswapV2Router02 router,
@@ -42,8 +35,8 @@ contract WidoZapperUniswapV2 is WidoZapper {
         bytes memory //extra
     )
     internal virtual override
-    returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
-        return router.addLiquidity(
+    returns (uint256 liquidity) {
+        (,, liquidity) = router.addLiquidity(
             tokenA,
             tokenB,
             amountADesired,
@@ -59,7 +52,6 @@ contract WidoZapperUniswapV2 is WidoZapper {
     function _balanceAssets(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
-        uint256 fullInvestment,
         address tokenA,
         address tokenB,
         bytes memory extra
@@ -67,6 +59,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
     internal virtual override
     returns (uint256[] memory amounts) {
         (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
+        uint256 fullInvestment = IERC20(tokenA).balanceOf(address(this));
 
         Asset memory assetFrom;
         Asset memory assetTo;
@@ -89,7 +82,9 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
         _approveTokenIfNeeded(tokenA, address(router));
 
-        amounts = _swap(
+        amounts = new uint256[](2);
+        amounts[0] = fullInvestment - swapAmountIn;
+        amounts[1] = _swap(
             router,
             swapAmountIn,
             tokenA,
@@ -122,6 +117,13 @@ contract WidoZapperUniswapV2 is WidoZapper {
         );
     }
 
+    /// @dev This function quotes the expected amountB given a certain amountA, while the pool has the specified reserves
+    function _quote(IUniswapV2Router02 router, uint256 amountA, uint256 reserveA, uint256 reserveB)
+    internal pure virtual
+    returns (uint256 amountB) {
+        return router.quote(amountA, reserveA, reserveB);
+    }
+
     /// @dev This function computes the amount out for a certain amount in
     function _getAmountOut(
         IUniswapV2Router02 router,
@@ -144,16 +146,17 @@ contract WidoZapperUniswapV2 is WidoZapper {
         bytes memory //extra
     )
     internal virtual override
-    returns (uint256[] memory amounts) {
+    returns (uint256 amountOut) {
         address[] memory path = new address[](2);
         path[0] = tokenIn;
         path[1] = tokenOut;
-        return router.swapExactTokensForTokens(
+        uint256[] memory amounts = router.swapExactTokensForTokens(
             amountIn,
             1,
             path,
             address(this),
             block.timestamp
         );
+        amountOut = amounts[1];
     }
 }

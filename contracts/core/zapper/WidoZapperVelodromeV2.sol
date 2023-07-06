@@ -76,7 +76,7 @@ contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
         bytes memory extra
     )
     internal virtual override
-    returns (uint256[] memory amounts) {
+    returns (uint256 amountOut) {
         VelodromeV2Router.Route[] memory routes = new VelodromeV2Router.Route[](1);
         routes[0] = VelodromeV2Router.Route({
             from : tokenIn,
@@ -84,12 +84,13 @@ contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
             stable : abi.decode(extra, (bool)),
             factory : address(0)  // we can use address(0), defaultFactory will be used
         });
-        return VelodromeV2Router(address(router)).swapExactTokensForTokens(
+        uint256[] memory amounts = VelodromeV2Router(address(router)).swapExactTokensForTokens(
             amountIn,
             1,
             routes,
             address(this),
             block.timestamp
         );
+        amountOut = amounts[1];
     }
 }
