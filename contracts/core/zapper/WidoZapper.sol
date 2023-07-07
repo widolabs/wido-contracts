@@ -29,7 +29,7 @@ abstract contract WidoZapper {
         address token;
     }
 
-    /// @notice Add liquidity to an Uniswap V2 pool using one of the pool tokens
+    /// @notice Add liquidity to a pool using one of the pool tokens
     /// @param router Address of the UniswapV2Router02 contract
     /// @param pair Address of the pair contract to add liquidity into
     /// @param fromToken Address of the token to swap
@@ -51,7 +51,7 @@ abstract contract WidoZapper {
         IERC20(address(pair)).safeTransfer(msg.sender, toTokenAmount);
     }
 
-    /// @notice Remove liquidity from an Uniswap V2 pool into one of the pool tokens
+    /// @notice Remove liquidity from a pool into one of the pool tokens
     /// @param router Address of the UniswapV2Router02 contract
     /// @param pair Address of the pair contract to remove liquidity from
     /// @param amount Amount of the lp token to spend on the user's behalf

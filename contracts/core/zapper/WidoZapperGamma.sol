@@ -52,6 +52,9 @@ contract WidoZapperGamma is WidoZapper {
     using LowGasSafeMath for uint160;
     using SafeERC20 for IERC20;
 
+    /// @dev there's a point at which the gas cost doesn't compensate the dust value
+    uint256 immutable public DUST_THRESHOLD = 1e10;
+
     struct Order {
         address tokenA;
         address tokenB;
@@ -60,6 +63,7 @@ contract WidoZapperGamma is WidoZapper {
         bytes extra;
     }
 
+    /// @inheritdoc WidoZapper
     function calcMinToAmountForZapIn(
         IUniswapV2Router02, //router,
         IUniswapV2Pair pair,
@@ -85,11 +89,7 @@ contract WidoZapperGamma is WidoZapper {
         );
     }
 
-    /// @notice Calculate the amount of to tokens received when removing liquidity from an UniswapV2 pool into a single asset.
-    /// @param pair Address of the pair contract to remove liquidity from
-    /// @param toToken Address of the to token
-    /// @param amount Amount of the lp token
-    /// @return minToToken Minimum amount of the to token the user would receive in a no-slippage scenario.
+    /// @inheritdoc WidoZapper
     function calcMinToAmountForZapOut(
         IUniswapV2Router02, // router,
         IUniswapV2Pair pair,
@@ -121,6 +121,7 @@ contract WidoZapperGamma is WidoZapper {
         }
     }
 
+    /// @inheritdoc WidoZapper
     function _swapAndAddLiquidity(
         IUniswapV2Router02, //router,
         IUniswapV2Pair pair,
@@ -143,11 +144,12 @@ contract WidoZapperGamma is WidoZapper {
 
         liquidity = _deposit(address(pair), sqrtPriceX96, order, amount, fromToken0);
 
-        liquidity = liquidity + _solveDust(pair, order, sqrtPriceX96);
+        liquidity = liquidity + _liquidateDust(pair, order, sqrtPriceX96);
     }
 
+    /// @inheritdoc WidoZapper
     function _removeLiquidityAndSwap(
-        IUniswapV2Router02 router,
+        IUniswapV2Router02, //router,
         IUniswapV2Pair pair,
         address toToken,
         bytes memory extra
@@ -166,12 +168,13 @@ contract WidoZapperGamma is WidoZapper {
         ? token0
         : token1;
 
+        (address swapRouter,) = abi.decode(extra, (address, uint256[4]));
+
         _swap(
-            router,
+            swapRouter,
             IERC20(fromToken).balanceOf(address(this)),
             fromToken,
-            toToken,
-            extra
+            toToken
         );
 
         return IERC20(toToken).balanceOf(address(this));
@@ -220,35 +223,6 @@ contract WidoZapperGamma is WidoZapper {
         }
     }
 
-    /// @dev This function adds liquidity into the pool
-    function _addLiquidity(
-        IUniswapV2Pair pair,
-        Order memory order
-    )
-    internal virtual
-    returns (uint256 liquidity) {
-
-        (, uint256[4] memory inMin) = abi.decode(order.extra, (address, uint256[4]));
-
-        inMin[0] = 0;
-        inMin[1] = 0;
-        inMin[2] = 0;
-        inMin[3] = 0;
-
-        address uniProxy = Hypervisor(address(pair)).whitelistedAddress();
-
-        _approveTokenIfNeeded(order.tokenA, address(pair), order.amountADesired);
-        _approveTokenIfNeeded(order.tokenB, address(pair), order.amountBDesired);
-
-        liquidity = UniProxy(uniProxy).deposit(
-            order.amountADesired,
-            order.amountBDesired,
-            msg.sender,
-            address(pair),
-            inMin
-        );
-    }
-
     /// @notice Re-balances `amount` of the input token, and deposits into the pool
     /// @param pool Address of the Hypervisor vault
     /// @param sqrtPriceX96 Current sqrtPrice
@@ -265,49 +239,75 @@ contract WidoZapperGamma is WidoZapper {
     )
     private
     returns (uint256 liquidity) {
+
+        // first we compute the ideal token balances that we should try to deposit,
+        //  given the value of our input assets
+
         // obtain `amount0` and `amount1` that equal to `amount` of the given token
-        (uint256 amount0, uint256 amount1) = _balancedAmounts(
+        (uint256 amountA, uint256 amountB) = _balancedAmounts(
             pool,
             sqrtPriceX96,
             amount,
             fromToken0
         );
 
+        // now we know how much of each token we need, so we can sell the difference
+        //  on what we have.
+        // The swap is not always going to be exact, so afterwards we check how much
+        //  token we received, and from that compute the pair amount in ratio.
+
+        (address swapRouter,) = abi.decode(order.extra, (address, uint256[4]));
+
         if (fromToken0) {
             // swap excess amount of input token for the pair token
             _swap(
-                IUniswapV2Router02(pool),
-                amount - amount0,
+                swapRouter,
+                amount - amountA,
                 order.tokenA,
-                order.tokenB,
-                order.extra
+                order.tokenB
             );
-            // get real amount of pair token
-            amount1 = IERC20(order.tokenB).balanceOf(address(this));
-            // get balanced amount for the amount of pair token we got
-            amount0 = _getPairAmount(pool, order.tokenB, amount1);
+            // get real amount of tokenB
+            amountB = IERC20(order.tokenB).balanceOf(address(this));
+            // get balanced amountA for the amount of tokenB we got
+            amountA = _getPairAmount(pool, order.tokenB, amountB);
         }
         else {
             // swap excess amount of input token for the pair token
             _swap(
-                IUniswapV2Router02(pool),
-                amount - amount1,
+                swapRouter,
+                amount - amountB,
                 order.tokenB,
-                order.tokenA,
-                order.extra
+                order.tokenA
             );
-            // get real amount of pair token
-            amount0 = IERC20(order.tokenA).balanceOf(address(this));
-            // get balanced amount for the amount of pair token we got
-            amount1 = _getPairAmount(pool, order.tokenA, amount0);
+            // get real amount of tokenA
+            amountA = IERC20(order.tokenA).balanceOf(address(this));
+            // get balanced amountB for the amount of tokenB we got
+            amountB = _getPairAmount(pool, order.tokenA, amountA);
         }
 
+        // pegging the amounts like this will generally leave some dust
+        //  so we'll have to run this function more than once
+
         // override order amounts
-        order.amountADesired = amount0;
-        order.amountBDesired = amount1;
+        order.amountADesired = amountA;
+        order.amountBDesired = amountB;
 
         // deposit liquidity into the pool
-        liquidity = _addLiquidity(IUniswapV2Pair(pool), order);
+
+        (, uint256[4] memory inMin) = abi.decode(order.extra, (address, uint256[4]));
+
+        _approveTokenIfNeeded(order.tokenA, pool, order.amountADesired);
+        _approveTokenIfNeeded(order.tokenB, pool, order.amountBDesired);
+
+        liquidity = UniProxy(
+            Hypervisor(pool).whitelistedAddress()
+        ).deposit(
+            order.amountADesired,
+            order.amountBDesired,
+            msg.sender,
+            pool,
+            inMin
+        );
     }
 
     /// @notice Computes the amount of the opposite asset that should be deposited to be a balanced deposit
@@ -326,20 +326,17 @@ contract WidoZapperGamma is WidoZapper {
         pairAmount = start + ((end - start) / 2);
     }
 
-    /// @notice
-    function _solveDust(
+    /// @dev This will iterate and deposit remaining amount of any token
+    function _liquidateDust(
         IUniswapV2Pair pair,
         Order memory order,
         uint160 sqrtPriceX96
     )
     internal
     returns (uint256 liquidity) {
-        // minimum amount of dust to act
-        uint256 threshold = 1e3;
-
         // check token0 dust
         uint256 dustBalance = IERC20(order.tokenA).balanceOf(address(this));
-        while (dustBalance > threshold) {
+        while (dustBalance > DUST_THRESHOLD) {
             // re-balance and deposit
             liquidity = liquidity + _deposit(address(pair), sqrtPriceX96, order, dustBalance, true);
             // check remaining dust
@@ -348,7 +345,7 @@ contract WidoZapperGamma is WidoZapper {
 
         // check token1 dust
         dustBalance = IERC20(order.tokenB).balanceOf(address(this));
-        while (dustBalance > threshold) {
+        while (dustBalance > DUST_THRESHOLD) {
             // re-balance and deposit
             liquidity = liquidity + _deposit(address(pair), sqrtPriceX96, order, dustBalance, false);
             // check remaining dust
@@ -358,11 +355,10 @@ contract WidoZapperGamma is WidoZapper {
 
     /// @dev This function swap amountIn through the path
     function _swap(
-        IUniswapV2Router02, // router,
+        address router,
         uint256 amountIn,
         address tokenIn,
-        address tokenOut,
-        bytes memory extra
+        address tokenOut
     )
     internal virtual
     returns (uint256 amountOut) {
@@ -376,9 +372,7 @@ contract WidoZapperGamma is WidoZapper {
             limitSqrtPrice : 0
         });
 
-        (address swapRouter,) = abi.decode(extra, (address, uint256[4]));
-
-        _approveTokenIfNeeded(tokenIn, swapRouter, amountIn);
-        amountOut = ISwapRouter(swapRouter).exactInputSingle(params);
+        _approveTokenIfNeeded(tokenIn, router, amountIn);
+        amountOut = ISwapRouter(router).exactInputSingle(params);
     }
 }

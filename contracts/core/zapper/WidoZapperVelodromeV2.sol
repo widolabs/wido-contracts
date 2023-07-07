@@ -40,13 +40,13 @@ interface VelodromeV2Router {
 /// @notice Add or remove liquidity from Velodrome V2 pools using just one of the pool tokens
 contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
 
-    /// @dev This function checks that the pair belongs to the factory
+    /// @inheritdoc WidoZapperUniswapV2
     function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair)
     internal virtual override {
         require(pair.factory() == VelodromeV2Router(address(router)).defaultFactory(), "Incompatible router and pair");
     }
 
-    /// @dev This function computes the amount out for a certain amount in
+    /// @inheritdoc WidoZapperUniswapV2
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,
@@ -67,7 +67,7 @@ contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
         amountOut = amounts[1];
     }
 
-    /// @dev This function swap amountIn through the path
+    /// @inheritdoc WidoZapperUniswapV2
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,

@@ -20,12 +20,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    /// @notice Calculate the amount of pool tokens received when adding liquidity to an UniswapV2 pool using a single asset
-    /// @param router Address of the UniswapV2Router02 contract
-    /// @param pair Address of the pair contract to add liquidity into
-    /// @param fromToken Address of the from token
-    /// @param amount Amount of the from token
-    /// @return minToToken Minimum amount of the lp token the user would receive in a no-slippage scenario.
+    /// @inheritdoc WidoZapper
     function calcMinToAmountForZapIn(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -64,12 +59,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
         return Math.min(amount0.mul(lpTotalSupply) / reserve0, amount1.mul(lpTotalSupply) / reserve1);
     }
 
-    /// @notice Calculate the amount of to tokens received when removing liquidity from an UniswapV2 pool into a single asset.
-    /// @param router Address of the UniswapV2Router02 contract
-    /// @param pair Address of the pair contract to remove liquidity from
-    /// @param toToken Address of the to token
-    /// @param lpAmount Amount of the lp token
-    /// @return minToToken Minimum amount of the to token the user would receive in a no-slippage scenario.
+    /// @inheritdoc WidoZapper
     function calcMinToAmountForZapOut(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -111,7 +101,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
         return amount0 + amount1;
     }
 
-    /// @notice Re-balances the amounts and adds liquidity to the pool
+    /// @inheritdoc WidoZapper
     function _swapAndAddLiquidity(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -146,7 +136,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
         return poolTokenAmount;
     }
 
-    /// @notice Removes liquidity from the pool and converts everything to a single asset
+    /// @inheritdoc WidoZapper
     function _removeLiquidityAndSwap(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -183,7 +173,8 @@ contract WidoZapperUniswapV2 is WidoZapper {
         return IERC20(toToken).balanceOf(address(this));
     }
 
-    /// @dev This function adds liquidity into the pool
+    /// @notice Adds liquidity into the pool
+    /// @dev This serves as an interface to adding liquidity into a pool
     function _addLiquidity(
         IUniswapV2Router02 router,
         address tokenA,
@@ -206,7 +197,6 @@ contract WidoZapperUniswapV2 is WidoZapper {
         );
     }
 
-    /// @notice This function swap amountIn through the path
     /// @param tokenA Input asset given by the user
     /// @param tokenB The pair token of the pool
     /// @param extra Bytes for extra details
@@ -288,14 +278,16 @@ contract WidoZapperUniswapV2 is WidoZapper {
         require(pair.factory() == router.factory(), "Incompatible router and pair");
     }
 
-    /// @dev Quotes the expected amountB given a certain amountA, while the pool has the specified reserves
+    /// @notice Quotes the expected amountB given a certain amountA, while the pool has the specified reserves
+    /// @dev This serves as an interface to quoting amountB on the router
     function _quote(IUniswapV2Router02 router, uint256 amountA, uint256 reserveA, uint256 reserveB)
     internal pure virtual
     returns (uint256 amountB) {
         return router.quote(amountA, reserveA, reserveB);
     }
 
-    /// @dev Computes the amount out for a certain amount in
+    /// @notice Computes the amount out for a certain amount in
+    /// @dev This serves as an interface for quoting max amount out
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,
@@ -308,7 +300,8 @@ contract WidoZapperUniswapV2 is WidoZapper {
         return router.getAmountOut(amountIn, assetIn.reserves, assetOut.reserves);
     }
 
-    /// @dev Swaps tokenIn into tokenB
+    /// @notice Swaps tokenIn into tokenB
+    /// @dev This serves as an interface to swapping on the pool
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,

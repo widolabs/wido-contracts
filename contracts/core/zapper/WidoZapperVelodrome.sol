@@ -49,13 +49,14 @@ interface VelodromeRouter {
 /// @notice Add or remove liquidity from Velodrome pools using just one of the pool tokens
 contract WidoZapperVelodrome is WidoZapperUniswapV2 {
 
-    /// @dev This function checks that the pair belongs to the factory
+    /// @inheritdoc WidoZapperUniswapV2
     function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair)
     internal virtual override {
         // Velodrome pairs do not expose their `factory`
     }
 
-    /// @dev This function quotes the expected amountB given a certain amountA, while the pool has the specified reserves
+    /// @inheritdoc WidoZapperUniswapV2
+    /// @dev
     ///  code is copied here from the VelodromeRouter because the function is defined as internal
     ///  https://github.com/velodrome-finance/contracts/blob/master/contracts/Router.sol#L58
     function _quote(
@@ -71,7 +72,7 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
         amountB = amountA * reserveB / reserveA;
     }
 
-    /// @dev This function computes the amount out for a certain amount in
+    /// @inheritdoc WidoZapperUniswapV2
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,
@@ -84,7 +85,7 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
         (amountOut,) = VelodromeRouter(address(router)).getAmountOut(amountIn, assetIn.token, assetOut.token);
     }
 
-    /// @dev This function adds liquidity into the pool
+    /// @inheritdoc WidoZapperUniswapV2
     function _addLiquidity(
         IUniswapV2Router02 router,
         address tokenA,
@@ -108,7 +109,7 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
         );
     }
 
-    /// @dev This function swap amountIn through the path
+    /// @inheritdoc WidoZapperUniswapV2
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,
