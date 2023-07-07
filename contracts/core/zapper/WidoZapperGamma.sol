@@ -17,7 +17,7 @@ import "@cryptoalgebra/periphery/contracts/interfaces/ISwapRouter.sol";
 import "@cryptoalgebra/core/contracts/libraries/TickMath.sol";
 import "@cryptoalgebra/periphery/contracts/libraries/LiquidityAmounts.sol";
 import "@cryptoalgebra/core/contracts/interfaces/IAlgebraPool.sol";
-import "forge-std/Test.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 interface Hypervisor {
     function whitelistedAddress() external view returns (address);
@@ -55,11 +55,14 @@ contract WidoZapperGamma is WidoZapper {
     /// @dev there's a point at which the gas cost doesn't compensate the dust value
     uint256 immutable public DUST_THRESHOLD = 1e10;
 
-    struct Order {
-        address tokenA;
-        address tokenB;
-        uint256 amountADesired;
-        uint256 amountBDesired;
+    struct Zap {
+        address router;
+        address pool;
+        address token0;
+        address token1;
+        uint160 sqrtPriceX96;
+        uint256 amount;
+        bool fromToken0;
         bytes extra;
     }
 
@@ -123,7 +126,7 @@ contract WidoZapperGamma is WidoZapper {
 
     /// @inheritdoc WidoZapper
     function _swapAndAddLiquidity(
-        IUniswapV2Router02, //router,
+        IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address tokenA,
         bytes memory extra
@@ -132,24 +135,26 @@ contract WidoZapperGamma is WidoZapper {
         (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
         uint256 amount = IERC20(tokenA).balanceOf(address(this));
         bool fromToken0 = pool.token0() == tokenA;
-        address tokenB = fromToken0 ? pool.token1() : pool.token0();
 
-        Order memory order = Order(
-            tokenA,
-            tokenB,
-            0, // will be filled in _deposit
-            0, // will be filled in _deposit
+        Zap memory zap = Zap(
+            address(router),
+            address(pair),
+            pool.token0(),
+            pool.token1(),
+            sqrtPriceX96,
+            amount,
+            fromToken0,
             extra
         );
 
-        liquidity = _deposit(address(pair), sqrtPriceX96, order, amount, fromToken0);
+        liquidity = _deposit(zap);
 
-        liquidity = liquidity + _liquidateDust(pair, order, sqrtPriceX96);
+        liquidity = liquidity + _liquidateDust(zap);
     }
 
     /// @inheritdoc WidoZapper
     function _removeLiquidityAndSwap(
-        IUniswapV2Router02, //router,
+        IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address toToken,
         bytes memory extra
@@ -171,13 +176,146 @@ contract WidoZapperGamma is WidoZapper {
         (address swapRouter,) = abi.decode(extra, (address, uint256[4]));
 
         _swap(
-            swapRouter,
+            address(router),
             IERC20(fromToken).balanceOf(address(this)),
             fromToken,
             toToken
         );
 
         return IERC20(toToken).balanceOf(address(this));
+    }
+
+    /// @notice Re-balances `amount` of the input token, and deposits into the pool
+    /// @return liquidity Amount of added liquidity into the vault
+    function _deposit(Zap memory zap) private returns (uint256 liquidity) {
+
+        // first we compute the ideal token balances that we should try to deposit,
+        //  given the value of our input assets
+
+        // obtain `amount0` and `amount1` that equal to `amount` of the given token
+        (uint256 amount0, uint256 amount1) = _balancedAmounts(
+            zap.pool,
+            zap.sqrtPriceX96,
+            zap.amount,
+            zap.fromToken0
+        );
+
+        // now we know how much of each token we need, so we can sell the difference
+        //  on what we have.
+        // The swap is not always going to be exact, so afterwards we check how much
+        //  token we received, and from that compute the pair amount in ratio.
+
+        // swap excess amount of input token for the pair token
+        uint256 balanceOut;
+
+        if (zap.fromToken0) {
+            _swap(
+                zap.router,
+                zap.amount - amount0,
+                zap.token0,
+                zap.token1
+            );
+            balanceOut = IERC20(zap.token1).balanceOf(address(this));
+            if (balanceOut < amount1) {
+                amount1 = balanceOut;
+                amount0 = _getPairAmount(zap.pool, zap.token1, amount1);
+            }
+        }
+        else {
+            _swap(
+                zap.router,
+                zap.amount - amount1,
+                zap.token1,
+                zap.token0
+            );
+            balanceOut = IERC20(zap.token0).balanceOf(address(this));
+            if (balanceOut < amount0) {
+                amount0 = balanceOut;
+                amount1 = _getPairAmount(zap.pool, zap.token0, amount0);
+            }
+        }
+
+        // pegging the amounts like this will generally leave some dust
+        //  so we'll have to run this function more than once
+
+        // deposit liquidity into the pool
+
+        _approveTokenIfNeeded(zap.token0, zap.pool, amount0);
+        _approveTokenIfNeeded(zap.token1, zap.pool, amount1);
+        (uint256[4] memory inMin) = abi.decode(zap.extra, (uint256[4]));
+
+        liquidity = UniProxy(
+            Hypervisor(zap.pool).whitelistedAddress()
+        ).deposit(
+            amount0,
+            amount1,
+            msg.sender,
+            zap.pool,
+            inMin
+        );
+    }
+
+    /// @dev This will iterate and deposit remaining amount of any token
+    function _liquidateDust(Zap memory zap) internal returns (uint256 liquidity) {
+        // check token0 dust
+        uint8 _decimals = IERC20Metadata(zap.token0).decimals();
+        zap.amount = IERC20(zap.token0).balanceOf(address(this));
+        zap.fromToken0 = true;
+        while (zap.amount > 10 ** (_decimals / 2)) {
+            // re-balance and deposit
+            liquidity = liquidity + _deposit(zap);
+            // check remaining dust
+            zap.amount = IERC20(zap.token0).balanceOf(address(this));
+        }
+
+        // check token1 dust
+        _decimals = IERC20Metadata(zap.token0).decimals();
+        zap.amount = IERC20(zap.token1).balanceOf(address(this));
+        zap.fromToken0 = false;
+        while (zap.amount > 10 ** (_decimals / 2)) {
+            // re-balance and deposit
+            liquidity = liquidity + _deposit(zap);
+            // check remaining dust
+            zap.amount = IERC20(zap.token1).balanceOf(address(this));
+        }
+    }
+
+    /// @dev This function swap amountIn through the path
+    function _swap(
+        address router,
+        uint256 amountIn,
+        address tokenIn,
+        address tokenOut
+    )
+    internal virtual
+    returns (uint256 amountOut) {
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
+            tokenIn : tokenIn,
+            tokenOut : tokenOut,
+            recipient : address(this),
+            deadline : block.timestamp,
+            amountIn : amountIn,
+            amountOutMinimum : 0,
+            limitSqrtPrice : 0
+        });
+        _approveTokenIfNeeded(tokenIn, router, amountIn);
+        amountOut = ISwapRouter(router).exactInputSingle(params);
+    }
+
+    /// @notice Computes the amount of the opposite asset that should be deposited to be a balanced deposit
+    /// @param pool Address of the Hypervisor vault
+    /// @param token Token address of the specified amount
+    /// @param amount Amount of assets we know we want to input
+    /// @return pairAmount Amount of the opposite token that needs to balance the position
+    function _getPairAmount(address pool, address token, uint256 amount) private view returns (uint256 pairAmount) {
+        (uint256 start, uint256 end) = UniProxy(
+            Hypervisor(pool).whitelistedAddress()
+        ).getDepositAmount(
+            pool,
+            token,
+            amount
+        );
+        pairAmount = start + ((end - start) / 2);
     }
 
     /// @notice Computes `amount0` and `amount1` that equal to the `amount` of the given token
@@ -221,158 +359,5 @@ contract WidoZapperGamma is WidoZapper {
                 amount1 = amount - ((amount0 * token0Price) / 1e18);
             }
         }
-    }
-
-    /// @notice Re-balances `amount` of the input token, and deposits into the pool
-    /// @param pool Address of the Hypervisor vault
-    /// @param sqrtPriceX96 Current sqrtPrice
-    /// @param order Order struct with the details of the deposit order
-    /// @param amount Input amount of the token
-    /// @param fromToken0 Indicates if the amount is of token0 or not
-    /// @return liquidity Amount of added liquidity into the vault
-    function _deposit(
-        address pool,
-        uint160 sqrtPriceX96,
-        Order memory order,
-        uint256 amount,
-        bool fromToken0
-    )
-    private
-    returns (uint256 liquidity) {
-
-        // first we compute the ideal token balances that we should try to deposit,
-        //  given the value of our input assets
-
-        // obtain `amount0` and `amount1` that equal to `amount` of the given token
-        (uint256 amountA, uint256 amountB) = _balancedAmounts(
-            pool,
-            sqrtPriceX96,
-            amount,
-            fromToken0
-        );
-
-        // now we know how much of each token we need, so we can sell the difference
-        //  on what we have.
-        // The swap is not always going to be exact, so afterwards we check how much
-        //  token we received, and from that compute the pair amount in ratio.
-
-        (address swapRouter,) = abi.decode(order.extra, (address, uint256[4]));
-
-        if (fromToken0) {
-            // swap excess amount of input token for the pair token
-            _swap(
-                swapRouter,
-                amount - amountA,
-                order.tokenA,
-                order.tokenB
-            );
-            // get real amount of tokenB
-            amountB = IERC20(order.tokenB).balanceOf(address(this));
-            // get balanced amountA for the amount of tokenB we got
-            amountA = _getPairAmount(pool, order.tokenB, amountB);
-        }
-        else {
-            // swap excess amount of input token for the pair token
-            _swap(
-                swapRouter,
-                amount - amountB,
-                order.tokenB,
-                order.tokenA
-            );
-            // get real amount of tokenA
-            amountA = IERC20(order.tokenA).balanceOf(address(this));
-            // get balanced amountB for the amount of tokenB we got
-            amountB = _getPairAmount(pool, order.tokenA, amountA);
-        }
-
-        // pegging the amounts like this will generally leave some dust
-        //  so we'll have to run this function more than once
-
-        // override order amounts
-        order.amountADesired = amountA;
-        order.amountBDesired = amountB;
-
-        // deposit liquidity into the pool
-
-        (, uint256[4] memory inMin) = abi.decode(order.extra, (address, uint256[4]));
-
-        _approveTokenIfNeeded(order.tokenA, pool, order.amountADesired);
-        _approveTokenIfNeeded(order.tokenB, pool, order.amountBDesired);
-
-        liquidity = UniProxy(
-            Hypervisor(pool).whitelistedAddress()
-        ).deposit(
-            order.amountADesired,
-            order.amountBDesired,
-            msg.sender,
-            pool,
-            inMin
-        );
-    }
-
-    /// @notice Computes the amount of the opposite asset that should be deposited to be a balanced deposit
-    /// @param pool Address of the Hypervisor vault
-    /// @param token Token address of the specified amount
-    /// @param amount Amount of assets we know we want to input
-    /// @return pairAmount Amount of the opposite token that needs to balance the position
-    function _getPairAmount(address pool, address token, uint256 amount) private view returns (uint256 pairAmount) {
-        (uint256 start, uint256 end) = UniProxy(
-            Hypervisor(pool).whitelistedAddress()
-        ).getDepositAmount(
-            pool,
-            token,
-            amount
-        );
-        pairAmount = start + ((end - start) / 2);
-    }
-
-    /// @dev This will iterate and deposit remaining amount of any token
-    function _liquidateDust(
-        IUniswapV2Pair pair,
-        Order memory order,
-        uint160 sqrtPriceX96
-    )
-    internal
-    returns (uint256 liquidity) {
-        // check token0 dust
-        uint256 dustBalance = IERC20(order.tokenA).balanceOf(address(this));
-        while (dustBalance > DUST_THRESHOLD) {
-            // re-balance and deposit
-            liquidity = liquidity + _deposit(address(pair), sqrtPriceX96, order, dustBalance, true);
-            // check remaining dust
-            dustBalance = IERC20(order.tokenA).balanceOf(address(this));
-        }
-
-        // check token1 dust
-        dustBalance = IERC20(order.tokenB).balanceOf(address(this));
-        while (dustBalance > DUST_THRESHOLD) {
-            // re-balance and deposit
-            liquidity = liquidity + _deposit(address(pair), sqrtPriceX96, order, dustBalance, false);
-            // check remaining dust
-            dustBalance = IERC20(order.tokenB).balanceOf(address(this));
-        }
-    }
-
-    /// @dev This function swap amountIn through the path
-    function _swap(
-        address router,
-        uint256 amountIn,
-        address tokenIn,
-        address tokenOut
-    )
-    internal virtual
-    returns (uint256 amountOut) {
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-            tokenIn : tokenIn,
-            tokenOut : tokenOut,
-            recipient : address(this),
-            deadline : block.timestamp,
-            amountIn : amountIn,
-            amountOutMinimum : 0,
-            limitSqrtPrice : 0
-        });
-
-        _approveTokenIfNeeded(tokenIn, router, amountIn);
-        amountOut = ISwapRouter(router).exactInputSingle(params);
     }
 }
