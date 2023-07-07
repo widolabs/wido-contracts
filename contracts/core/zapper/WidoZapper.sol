@@ -85,35 +85,7 @@ abstract contract WidoZapper {
         address fromToken,
         uint256 amount,
         bytes calldata extra
-    ) external view returns (uint256 minToToken) {
-        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
-        Asset memory asset0 = Asset(reserve0, pair.token0());
-        Asset memory asset1 = Asset(reserve1, pair.token1());
-
-        // checking initial balance into `amount`, will be reusing the slot
-        uint256 amount0 = IERC20(asset0.token).balanceOf(address(pair));
-        uint256 amount1 = IERC20(asset1.token).balanceOf(address(pair));
-
-        require(asset0.token == fromToken || asset1.token == fromToken, "Input token not present in liquidity pair");
-
-        uint256 halfAmount0;
-        uint256 halfAmount1;
-
-        // stack too deep, so we can't store this bool
-        if (asset0.token == fromToken) {
-            halfAmount0 = amount / 2;
-            halfAmount1 = _getAmountOut(router, halfAmount0, asset0, asset1, extra);
-        } else {
-            halfAmount1 = amount / 2;
-            halfAmount0 = _getAmountOut(router, halfAmount1, asset1, asset0, extra);
-        }
-
-        amount0 = amount0 + halfAmount0 - reserve0;
-        amount1 = amount1 + halfAmount1 - reserve1;
-
-        uint256 lpTotalSupply = pair.totalSupply();
-        return Math.min(amount0.mul(lpTotalSupply) / reserve0, amount1.mul(lpTotalSupply) / reserve1);
-    }
+    ) external view virtual returns (uint256 minToToken);
 
     /// @notice Calculate the amount of to tokens received when removing liquidity from an UniswapV2 pool into a single asset.
     /// @param router Address of the UniswapV2Router02 contract
@@ -127,157 +99,28 @@ abstract contract WidoZapper {
         address toToken,
         uint256 lpAmount,
         bytes calldata extra
-    ) external view returns (uint256 minToToken) {
-        (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
-        uint256 lpTotalSupply = pair.totalSupply();
+    ) external view virtual returns (uint256 minToToken);
 
-        bool isZapToToken0 = pair.token0() == toToken;
-        require(isZapToToken0 || pair.token1() == toToken, "Input token not present in liquidity pair");
-
-        uint256 amount0;
-        uint256 amount1;
-        Asset memory asset0 = Asset(reserve0, pair.token0());
-        Asset memory asset1 = Asset(reserve1, pair.token1());
-
-        if (isZapToToken0) {
-            amount0 = (lpAmount * reserve0) / lpTotalSupply;
-            amount1 = _getAmountOut(
-                router,
-                (lpAmount * reserve1) / lpTotalSupply,
-                asset1, asset0,
-                extra
-            );
-        } else {
-            amount0 = _getAmountOut(
-                router,
-                (lpAmount * reserve0) / lpTotalSupply,
-                asset0, asset1,
-                extra
-            );
-            amount1 = (lpAmount * reserve1) / lpTotalSupply;
-        }
-
-        return amount0 + amount1;
-    }
-
-    function _removeLiquidityAndSwap(
-        IUniswapV2Router02 router,
-        IUniswapV2Pair pair,
-        address toToken,
-        bytes memory extra
-    ) private returns (uint256) {
-        _requires(router, pair);
-
-        address token0 = pair.token0();
-        address token1 = pair.token1();
-        require(token0 == toToken || token1 == toToken, "Desired token not present in liquidity pair");
-
-        IERC20(address(pair)).safeTransfer(
-            address(pair),
-            IERC20(address(pair)).balanceOf(address(this))
-        );
-        pair.burn(address(this));
-
-        address fromToken = token1 == toToken
-        ? token0
-        : token1;
-
-        _approveTokenIfNeeded(fromToken, address(router));
-        _swap(
-            router,
-            IERC20(fromToken).balanceOf(address(this)),
-            fromToken,
-            toToken,
-            extra
-        );
-
-        return IERC20(toToken).balanceOf(address(this));
-    }
-
+    /// @notice Balances the amounts and adds liquidity to the pool
     function _swapAndAddLiquidity(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address tokenA,
         bytes memory extra
-    ) private returns (uint256) {
-        _requires(router, pair);
+    ) internal virtual returns (uint256 addedLiquidity);
 
-        bool isInputA = pair.token0() == tokenA;
-        require(isInputA || pair.token1() == tokenA, "Input token not present in liquidity pair");
-
-        address tokenB = isInputA
-        ? pair.token1()
-        : pair.token0();
-
-        uint256[] memory balancedAmounts = _balanceAssets(router, pair, tokenA, tokenB, extra);
-
-        _approveTokenIfNeeded(tokenB, address(router));
-        uint256 poolTokenAmount = _addLiquidity(
-            router,
-            tokenA,
-            tokenB,
-            balancedAmounts[0],
-            balancedAmounts[1],
-            extra
-        );
-
-        return poolTokenAmount;
-    }
-
-    function _approveTokenIfNeeded(address token, address spender) internal {
-        if (IERC20(token).allowance(address(this), spender) == 0) {
-            IERC20(token).safeApprove(spender, type(uint256).max);
-        }
-    }
-
-    /** Virtual functions */
-
-    /// @dev Checks that the pair belongs to the factory
-    function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair)
-    internal virtual;
-
-    /// @dev Adds liquidity into the pool
-    function _addLiquidity(
-        IUniswapV2Router02 router,
-        address tokenA,
-        address tokenB,
-        uint amountADesired,
-        uint amountBDesired,
-        bytes memory //extra
-    )
-    internal virtual
-    returns (uint256 liquidity);
-
-    /// @dev Re-balances the full investment into tokenA and tokenB
-    function _balanceAssets(
+    /// @notice Removes liquidity from the pool and converts everything to a single asset
+    function _removeLiquidityAndSwap(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
-        address tokenA,
-        address tokenB,
+        address toToken,
         bytes memory extra
-    )
-    internal virtual
-    returns (uint256[] memory amounts);
+    ) internal virtual returns (uint256);
 
-    /// @dev Computes the max amount out given the amount in
-    function _getAmountOut(
-        IUniswapV2Router02 router,
-        uint256 amountIn,
-        Asset memory assetIn,
-        Asset memory assetOut,
-        bytes memory //extra
-    )
-    internal view virtual
-    returns (uint256 amountOut);
-
-    /// @dev Swaps tokenIn into tokenB
-    function _swap(
-        IUniswapV2Router02 router,
-        uint256 amountIn,
-        address tokenIn,
-        address tokenOut,
-        bytes memory extra
-    )
-    internal virtual
-    returns (uint256 amountOut);
+    /// @notice Approves the tokens when not enough allowance
+    function _approveTokenIfNeeded(address token, address spender, uint256 amount) internal {
+        if (IERC20(token).allowance(address(this), spender) < amount) {
+            IERC20(token).safeIncreaseAllowance(spender, amount);
+        }
+    }
 }
