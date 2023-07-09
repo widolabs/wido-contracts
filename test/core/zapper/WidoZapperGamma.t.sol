@@ -12,7 +12,7 @@ contract WidoZapperGammaTest is PolygonForkTest {
 
     WidoZapperGamma zapper;
 
-    address constant UNI_ROUTER = address(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    address constant UNI_ROUTER = address(0xf5b509bB0909a69B1c207E495f687a596C168E12);
     address constant WMATIC_QUICK_LP = address(0x7f09bD2801A7b795dF29C273C4afbB0Ff15E2D63);
 
     function setUp() public {
@@ -69,6 +69,52 @@ contract WidoZapperGammaTest is PolygonForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
+    function test_zapLPForWMATIC() public {
+        /** Arrange */
+
+        _zapIn(zapper, WMATIC, 150e18);
+
+        address fromAsset = WMATIC_QUICK_LP;
+        address toAsset = WMATIC;
+        uint256 amount = IERC20(fromAsset).balanceOf(user1);
+
+        /** Act */
+
+        uint256 minToToken = _zapOut(zapper, fromAsset, toAsset, amount);
+
+        /** Assert */
+
+        uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
+        uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
+
+        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertGe(finalToBalance, minToToken, "To balance incorrect");
+    }
+
+    function test_zapLPForQUICK() public {
+        /** Arrange */
+
+        _zapIn(zapper, QUICK, 150e18);
+
+        address fromAsset = WMATIC_QUICK_LP;
+        address toAsset = QUICK;
+        uint256 amount = IERC20(fromAsset).balanceOf(user1);
+
+        assertGt(IERC20(fromAsset).balanceOf(user1), 0, "From balance incorrect");
+
+        /** Act */
+
+        uint256 minToToken = _zapOut(zapper, fromAsset, toAsset, amount);
+
+        /** Assert */
+
+        uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
+        uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
+
+        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertGe(finalToBalance, minToToken, "To balance incorrect");
+    }
+
     function _zapIn(
         WidoZapperGamma _zapper,
         address _fromAsset,
@@ -77,14 +123,13 @@ contract WidoZapperGammaTest is PolygonForkTest {
         deal(_fromAsset, user1, _amountIn);
         vm.startPrank(user1);
 
-        address swapRouter = address(0xf5b509bB0909a69B1c207E495f687a596C168E12);
         uint256[] memory inMin = new uint256[](4);
         inMin[0] = 0;
         inMin[1] = 0;
         inMin[2] = 0;
         inMin[3] = 0;
 
-        bytes memory data = abi.encode(swapRouter, inMin);
+        bytes memory data = abi.encode(inMin);
 
         minToToken = _zapper.calcMinToAmountForZapIn(
             IUniswapV2Router02(UNI_ROUTER),
@@ -102,6 +147,42 @@ contract WidoZapperGammaTest is PolygonForkTest {
             IUniswapV2Pair(WMATIC_QUICK_LP),
             _fromAsset,
             _amountIn,
+            minToToken,
+            data
+        );
+    }
+
+    function _zapOut(
+        WidoZapperGamma _zapper,
+        address _fromAsset,
+        address _toAsset,
+        uint256 _amountIn
+    ) internal returns (uint256 minToToken){
+
+        uint256[] memory inMin = new uint256[](4);
+        inMin[0] = 0;
+        inMin[1] = 0;
+        inMin[2] = 0;
+        inMin[3] = 0;
+
+        bytes memory data = abi.encode(inMin);
+
+        minToToken = _zapper.calcMinToAmountForZapOut(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(WMATIC_QUICK_LP),
+            _toAsset,
+            _amountIn,
+            data
+        )
+        .mul(998)
+        .div(1000);
+
+        IERC20(_fromAsset).approve(address(_zapper), _amountIn);
+        _zapper.zapOut(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(WMATIC_QUICK_LP),
+            _amountIn,
+            _toAsset,
             minToToken,
             data
         );

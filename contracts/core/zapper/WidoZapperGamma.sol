@@ -33,6 +33,21 @@ interface Hypervisor {
     function baseLower() external pure returns (int24);
 
     function baseUpper() external pure returns (int24);
+
+    function limitLower() external pure returns (int24);
+
+    function limitUpper() external pure returns (int24);
+
+    function withdraw(
+        uint256 shares,
+        address to,
+        address from,
+        uint256[4] memory minAmounts
+    ) external returns (uint256 amount0, uint256 amount1);
+
+    function getTotalAmounts() external view returns (uint256 total0, uint256 total1);
+
+    function totalSupply() external view returns (uint256 total);
 }
 
 interface UniProxy {
@@ -75,21 +90,14 @@ contract WidoZapperGamma is WidoZapper {
         bytes calldata //extra
     ) external view virtual override returns (uint256 minToToken) {
         IAlgebraPool pool = IAlgebraPool(Hypervisor(address(pair)).pool());
-        bool isZapFromToken0 = pool.token0() == fromToken;
         (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
+        uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)), 1e36, 2 ** (96 * 2));
 
-        (uint256 amount0, uint256 amount1) = _balancedAmounts(address(pair), sqrtPriceX96, amount, isZapFromToken0);
+        (uint256 pool0, uint256 pool1) = Hypervisor(address(pair)).getTotalAmounts();
 
-        uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(Hypervisor(address(pair)).baseLower());
-        uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(Hypervisor(address(pair)).baseUpper());
-
-        minToToken = LiquidityAmounts.getLiquidityForAmounts(
-            sqrtPriceX96,
-            sqrtRatioAX96,
-            sqrtRatioBX96,
-            amount0,
-            amount1
-        );
+        uint256 total = Hypervisor(address(pair)).totalSupply();
+        uint256 pool0PricedInToken1 = pool0.mul(price) / 1e36;
+        minToToken = amount.mul(total) / pool0PricedInToken1.add(pool1);
     }
 
     /// @inheritdoc WidoZapper
@@ -105,23 +113,48 @@ contract WidoZapperGamma is WidoZapper {
         bool isZapToToken0 = pool.token0() == toToken;
         require(isZapToToken0 || pool.token1() == toToken, "Output token not present in liquidity pool");
 
-        (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
-        uint160 sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(Hypervisor(address(pair)).baseLower());
-        uint160 sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(Hypervisor(address(pair)).baseUpper());
+        (uint amount0, uint amount1) = _getAmountsOut(Hypervisor(address(pair)), amount);
 
-        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
-            sqrtPriceX96,
-            sqrtRatioAX96,
-            sqrtRatioBX96,
-            uint128(amount)
-        );
-        uint256 token0Price = FullMath.mulDiv(sqrtPriceX96 * 1e18, sqrtPriceX96, 2 ** 192);
+        (uint160 sqrtRatioX96,,,,,,) = pool.globalState();
+        uint256 token0Price = FullMath.mulDiv(sqrtRatioX96.mul(1e18), sqrtRatioX96, 2 ** 192);
 
         if (isZapToToken0) {
             minToToken = amount0 + (amount1 * 1e18) / token0Price;
         } else {
             minToToken = amount1 + (amount0 * token0Price) / 1e18;
         }
+    }
+
+    function _getAmountsOut(
+        Hypervisor hyper,
+        uint256 shares
+    ) internal view returns (uint256 amount0, uint256 amount1) {
+        (uint base0, uint base1) = _amountsForShares(hyper, hyper.baseLower(), hyper.baseUpper(), shares);
+        (uint limit0, uint limit1) = _amountsForShares(hyper, hyper.limitLower(), hyper.limitUpper(), shares);
+        uint256 unusedAmount0 = IERC20(hyper.token0()).balanceOf(address(hyper)).mul(shares) / hyper.totalSupply();
+        uint256 unusedAmount1 = IERC20(hyper.token1()).balanceOf(address(hyper)).mul(shares) / hyper.totalSupply();
+        amount0 = base0.add(limit0).add(unusedAmount0);
+        amount1 = base1.add(limit1).add(unusedAmount1);
+    }
+
+    function _amountsForShares(
+        Hypervisor hyper,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 shares
+    ) internal view returns (uint256, uint256) {
+        IAlgebraPool pool = IAlgebraPool(hyper.pool());
+        bytes32 positionKey = keccak256(abi.encodePacked(address(hyper), tickLower, tickUpper));
+        (uint position, , , ,) = pool.positions(positionKey);
+        uint128 liquidity = uint128(position.mul(shares) / hyper.totalSupply());
+        (uint160 sqrtRatioX96, , , , , ,) = pool.globalState();
+        return
+        LiquidityAmounts.getAmountsForLiquidity(
+            sqrtRatioX96,
+            TickMath.getSqrtRatioAtTick(tickLower),
+            TickMath.getSqrtRatioAtTick(tickUpper),
+            liquidity
+        );
     }
 
     /// @inheritdoc WidoZapper
@@ -157,23 +190,24 @@ contract WidoZapperGamma is WidoZapper {
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address toToken,
-        bytes memory extra
+        bytes memory //extra
     ) internal virtual override returns (uint256) {
         address token0 = pair.token0();
         address token1 = pair.token1();
         require(token0 == toToken || token1 == toToken, "Desired token not present in liquidity pair");
+        uint256[4] memory inMin;
+        uint256 amount = IERC20(address(pair)).balanceOf(address(this));
 
-        IERC20(address(pair)).safeTransfer(
-            address(pair),
-            IERC20(address(pair)).balanceOf(address(this))
+        Hypervisor(address(pair)).withdraw(
+            amount,
+            address(this),
+            address(this),
+            inMin
         );
-        pair.burn(address(this));
 
         address fromToken = token1 == toToken
         ? token0
         : token1;
-
-        (address swapRouter,) = abi.decode(extra, (address, uint256[4]));
 
         _swap(
             address(router),
