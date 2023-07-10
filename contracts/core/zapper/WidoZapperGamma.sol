@@ -89,15 +89,34 @@ contract WidoZapperGamma is WidoZapper {
         uint256 amount,
         bytes calldata //extra
     ) external view virtual override returns (uint256 minToToken) {
-        IAlgebraPool pool = IAlgebraPool(Hypervisor(address(pair)).pool());
-        (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
-        uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)), 1e36, 2 ** (96 * 2));
+        Hypervisor hyper = Hypervisor(address(pair));
 
-        (uint256 pool0, uint256 pool1) = Hypervisor(address(pair)).getTotalAmounts();
+        if (hyper.token0() == fromToken) {
+            minToToken = LiquidityAmounts.getLiquidityForAmount0(
+                TickMath.getSqrtRatioAtTick(hyper.baseLower()),
+                TickMath.getSqrtRatioAtTick(hyper.baseUpper()),
+                amount
+            );
 
-        uint256 total = Hypervisor(address(pair)).totalSupply();
-        uint256 pool0PricedInToken1 = pool0.mul(price) / 1e36;
-        minToToken = amount.mul(total) / pool0PricedInToken1.add(pool1);
+            minToToken = minToToken + LiquidityAmounts.getLiquidityForAmount0(
+                TickMath.getSqrtRatioAtTick(hyper.limitLower()),
+                TickMath.getSqrtRatioAtTick(hyper.limitUpper()),
+                amount
+            );
+        }
+        else {
+            minToToken = LiquidityAmounts.getLiquidityForAmount1(
+                TickMath.getSqrtRatioAtTick(hyper.baseLower()),
+                TickMath.getSqrtRatioAtTick(hyper.baseUpper()),
+                amount
+            );
+
+            minToToken = minToToken + LiquidityAmounts.getLiquidityForAmount1(
+                TickMath.getSqrtRatioAtTick(hyper.limitLower()),
+                TickMath.getSqrtRatioAtTick(hyper.limitUpper()),
+                amount
+            );
+        }
     }
 
     /// @inheritdoc WidoZapper

@@ -115,6 +115,133 @@ contract WidoZapperGammaTest is PolygonForkTest {
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
+    function test_revertWhen_zapWMATICForLP_HasHighSlippage() public {
+        /** Arrange */
+
+        uint256 amount = 5 ether;
+        address fromAsset = WMATIC;
+        deal(fromAsset, user1, amount);
+
+        uint256[] memory inMin = new uint256[](4);
+        inMin[0] = 0;
+        inMin[1] = 0;
+        inMin[2] = 0;
+        inMin[3] = 0;
+
+        bytes memory data = abi.encode(inMin);
+
+        uint256 minToToken = zapper.calcMinToAmountForZapIn(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(WMATIC_QUICK_LP),
+            fromAsset,
+            amount,
+            data
+        )
+        .mul(1070)
+        .div(1000);
+
+        vm.startPrank(user1);
+
+        IERC20(fromAsset).approve(address(zapper), amount);
+
+        /** Act & Assert */
+
+        vm.expectRevert();
+
+        zapper.zapIn(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(WMATIC_QUICK_LP),
+            fromAsset,
+            amount,
+            minToToken,
+            data
+        );
+    }
+
+    function test_revertWhen_zapWMATICForLP_NoApproval() public {
+        /** Arrange */
+
+        uint256 amount = 0.5 ether;
+        address fromAsset = WMATIC;
+        deal(fromAsset, user1, amount);
+
+        uint256[] memory inMin = new uint256[](4);
+        inMin[0] = 0;
+        inMin[1] = 0;
+        inMin[2] = 0;
+        inMin[3] = 0;
+
+        bytes memory data = abi.encode(inMin);
+
+        uint256 minToToken = zapper.calcMinToAmountForZapIn(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(WMATIC_QUICK_LP),
+            fromAsset,
+            amount,
+            data
+        )
+        .mul(998)
+        .div(1000);
+
+        vm.startPrank(user1);
+
+        /** Act & Assert */
+
+        vm.expectRevert();
+
+        zapper.zapIn(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(WMATIC_QUICK_LP),
+            fromAsset,
+            amount,
+            minToToken,
+            data
+        );
+    }
+
+    function test_revertWhen_zapLPForWMATIC_NoBalance() public {
+        /** Arrange */
+
+        address fromAsset = WMATIC_QUICK_LP;
+        address toAsset = WMATIC;
+        uint256 amount = 5 ether;
+
+        uint256[] memory inMin = new uint256[](4);
+        inMin[0] = 0;
+        inMin[1] = 0;
+        inMin[2] = 0;
+        inMin[3] = 0;
+
+        bytes memory data = abi.encode(inMin);
+
+        uint256 minToToken = zapper.calcMinToAmountForZapOut(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(WMATIC_QUICK_LP),
+            toAsset,
+            amount,
+            data
+        )
+        .mul(998)
+        .div(1000);
+
+        vm.startPrank(user1);
+
+        IERC20(fromAsset).approve(address(zapper), amount);
+
+        /** Act & Assert */
+
+        vm.expectRevert();
+
+        zapper.zapOut(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(WMATIC_QUICK_LP),
+            amount,
+            toAsset,
+            minToToken,
+            data
+        );
+    }
+
     function _zapIn(
         WidoZapperGamma _zapper,
         address _fromAsset,
