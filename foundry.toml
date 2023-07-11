@@ -4,12 +4,18 @@ out = "artifacts"
 libs = ["node_modules", "lib"]
 remappings = [
     "@ensdomains/=node_modules/@ensdomains/",
-    "@openzeppelin/=node_modules/@openzeppelin/",
+    "@openzeppelin/=lib/openzeppelin-contracts/",
     "@uniswap/=node_modules/@uniswap/",
+    "@uniswap-v2-core=lib/v2-core/",
+    "@uniswap-v2-periphery=lib/v2-periphery/",
+    "@uniswap-v3-core=lib/v3-core/",
+    "@uniswap-v3-periphery=lib/v3-periphery/",
+    "@uniswap-swap-router-contracts=lib/swap-router-contracts/",
     "eth-gas-reporter/=node_modules/eth-gas-reporter/",
     "hardhat-deploy/=node_modules/hardhat-deploy/",
     "hardhat/=node_modules/hardhat/",
     "solmate/=node_modules/solmate/",
+    "@cryptoalgebra/=lib/Algebra/src/",
 ]
 #libraries = [
 #  "contracts/compound/libraries/LibCollateralSwap.sol:LibCollateralSwap:0x8D650E711df1742292266b82e97D15FC7DFbDd13"

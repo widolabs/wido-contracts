@@ -33,16 +33,21 @@ interface CamelotRouter {
 /// @notice Add or remove liquidity from CamelotDEX pools using just one of the pool tokens
 contract WidoZapperCamelot is WidoZapperUniswapV2 {
 
-    /// @dev This function swap amountIn through the path
+    /// @inheritdoc WidoZapperUniswapV2
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        address[] memory path,
+        address tokenIn,
+        address tokenOut,
         bytes memory //extra
     )
     internal virtual override
-    returns (uint256[] memory amounts) {
-        amounts = CamelotRouter(address(router)).getAmountsOut(amountIn, path);
+    returns (uint256 amountOut) {
+        address[] memory path = new address[](2);
+        path[0] = tokenIn;
+        path[1] = tokenOut;
+        uint256[] memory amounts = CamelotRouter(address(router)).getAmountsOut(amountIn, path);
+        amountOut = amounts[1];
         CamelotRouter(address(router)).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             amountIn,
             1,
@@ -52,7 +57,8 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
             block.timestamp
         );
     }
-    /// @dev This function computes the amount out for a certain amount in
+
+    /// @inheritdoc WidoZapperUniswapV2
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,

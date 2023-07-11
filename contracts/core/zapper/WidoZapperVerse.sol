@@ -17,6 +17,8 @@ import "./WidoZapperUniswapV2.sol";
 /// @title Verse pools Zapper
 /// @notice Add or remove liquidity from Verse Bitcoin.com pools using just one of the pool tokens
 contract WidoZapperVerse is WidoZapperUniswapV2 {
+
+    /// @inheritdoc WidoZapperUniswapV2
     function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair) internal override {
         // bytes4(keccak256('FACTORY()'))
         (bool success, bytes memory result) = address(router).call(hex"2dd31000");
