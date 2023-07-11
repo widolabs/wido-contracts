@@ -311,7 +311,7 @@ contract WidoZapperGamma is WidoZapper {
         uint8 _decimals = IERC20Metadata(zap.token0).decimals();
         zap.amount = IERC20(zap.token0).balanceOf(address(this));
         zap.fromToken0 = true;
-        while (zap.amount > 10 ** (_decimals / 2)) {
+        if (zap.amount > 10 ** (_decimals / 2)) {
             // re-balance and deposit
             liquidity = liquidity + _deposit(zap);
             // check remaining dust
@@ -322,7 +322,7 @@ contract WidoZapperGamma is WidoZapper {
         _decimals = IERC20Metadata(zap.token0).decimals();
         zap.amount = IERC20(zap.token1).balanceOf(address(this));
         zap.fromToken0 = false;
-        while (zap.amount > 10 ** (_decimals / 2)) {
+        if (zap.amount > 10 ** (_decimals / 2)) {
             // re-balance and deposit
             liquidity = liquidity + _deposit(zap);
             // check remaining dust
