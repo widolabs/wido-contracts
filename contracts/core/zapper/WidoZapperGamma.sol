@@ -67,9 +67,6 @@ contract WidoZapperGamma is WidoZapper {
     using LowGasSafeMath for uint160;
     using SafeERC20 for IERC20;
 
-    /// @dev there's a point at which the gas cost doesn't compensate the dust value
-    uint256 immutable public DUST_THRESHOLD = 1e10;
-
     struct Zap {
         address router;
         address pool;

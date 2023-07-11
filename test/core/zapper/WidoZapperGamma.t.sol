@@ -137,7 +137,7 @@ contract WidoZapperGammaTest is PolygonForkTest {
             amount,
             data
         )
-        .mul(1070)
+        .mul(1100)
         .div(1000);
 
         vm.startPrank(user1);
