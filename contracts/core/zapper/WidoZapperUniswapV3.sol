@@ -169,6 +169,8 @@ interface INonfungiblePositionManager {
     /// must be collected first.
     /// @param tokenId The ID of the token that is being burned
     function burn(uint256 tokenId) external payable;
+
+    function safeTransferFrom(address from, address to, uint256 tokenId) external;
 }
 
 interface IERC721Receiver {
@@ -346,7 +348,10 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
             deadline : block.timestamp
         });
 
-        (uint256 tokenId, uint128 liquidity, ,) = INonfungiblePositionManager(nonfungiblePositionManager).mint(params);
+        uint tokenId;
+        (tokenId, liquidity,,) = INonfungiblePositionManager(nonfungiblePositionManager).mint(params);
+
+        INonfungiblePositionManager(nonfungiblePositionManager).safeTransferFrom(address(this), msg.sender, tokenId);
     }
 
     /// @inheritdoc WidoZapper
