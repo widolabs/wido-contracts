@@ -32,14 +32,12 @@ abstract contract WidoZapper {
     /// @notice Add liquidity to a pool using one of the pool tokens
     /// @param router Address of the UniswapV2Router02 contract
     /// @param pair Address of the pair contract to add liquidity into
-    /// @param recipient Address of the address that should receive the dust if any is left
     /// @param fromToken Address of the token to swap
     /// @param amount Amount of the from token to spend on the user's behalf
     /// @param minToToken Minimum amount of the pool token the user is willing to accept
     function zapIn(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
-        address recipient,
         address fromToken,
         uint256 amount,
         uint256 minToToken,
@@ -50,6 +48,7 @@ abstract contract WidoZapper {
         uint256 toTokenAmount = _swapAndAddLiquidity(router, pair, fromToken, extra);
         require(toTokenAmount >= minToToken, "Slippage too high");
 
+        address recipient = address(0); // TEMP fix
         uint256 dust = IERC20(pair.token0()).balanceOf(address(this));
         if (dust > 0) {
             IERC20(pair.token0()).safeTransfer(recipient, dust);
