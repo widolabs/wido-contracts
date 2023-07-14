@@ -13,7 +13,9 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     WidoZapperCamelot zapper;
 
     address constant CAMELOT_ROUTER = address(0xc873fEcbd354f5A56E00E710B90EF4201db2448d);
-    address constant WETH_ARB_LP = address(0xa6c5C7D189fA4eB5Af8ba34E63dCDD3a635D433f);
+    address constant WETH_ARB_LP = address(0x913398d79438e8D709211cFC3DC8566F6C67e1A8);
+    address constant GMX = address(0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a);
+    address constant USDCe = address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8);
 
     function setUp() public {
         setUpBase();
@@ -28,8 +30,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     function test_zapARBForLP() public {
         /** Arrange */
 
-        uint256 amount = 150_000_000;
-        address fromAsset = ARB;
+        uint256 amount = 150e18;
+        address fromAsset = GMX;
         address toAsset = WETH_ARB_LP;
 
         /** Act */
@@ -41,8 +43,10 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertEq(IERC20(ARB).balanceOf(address(zapper)), 0, "Dust");
-        assertEq(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+        console2.log(IERC20(GMX).balanceOf(address(zapper)));
+        assertEq(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
+        console2.log(IERC20(USDCe).balanceOf(address(zapper)));
+        assertEq(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -51,8 +55,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     function test_zapWETHForLP() public {
         /** Arrange */
 
-        uint256 amount = 0.5 ether;
-        address fromAsset = WETH;
+        uint256 amount = 13704e6;
+        address fromAsset = USDCe;
         address toAsset = WETH_ARB_LP;
 
         /** Act */
@@ -64,8 +68,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertEq(IERC20(ARB).balanceOf(address(zapper)), 0, "Dust");
-        assertEq(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -74,10 +78,10 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     function test_zapLPForARB() public {
         /** Arrange */
 
-        _zapIn(zapper, ARB, 150_000_000);
+        _zapIn(zapper, GMX, 15e18);
 
         address fromAsset = WETH_ARB_LP;
-        address toAsset = ARB;
+        address toAsset = GMX;
         uint256 amount = IERC20(fromAsset).balanceOf(user1);
 
         /** Act */
@@ -89,8 +93,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertEq(IERC20(ARB).balanceOf(address(zapper)), 0, "Dust");
-        assertEq(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -99,10 +103,10 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     function test_zapLPForWETH() public {
         /** Arrange */
 
-        _zapIn(zapper, WETH, 0.5 ether);
+        _zapIn(zapper, USDCe, 150e6);
 
         address fromAsset = WETH_ARB_LP;
-        address toAsset = WETH;
+        address toAsset = USDCe;
         uint256 amount = IERC20(fromAsset).balanceOf(user1);
 
         /** Act */
@@ -114,8 +118,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertEq(IERC20(ARB).balanceOf(address(zapper)), 0, "Dust");
-        assertEq(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -124,16 +128,15 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     function test_revertWhen_zapARBForLP_HasHighSlippage() public {
         /** Arrange */
 
-        uint256 amount = 0.5 ether;
-        address fromAsset = WETH;
+        uint256 amount = 150e18;
+        address fromAsset = GMX;
         deal(fromAsset, user1, amount);
 
         uint256 minToToken = zapper.calcMinToAmountForZapIn(
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             fromAsset,
-            amount,
-            bytes("")
+            amount
         )
         .mul(1002)
         .div(1000);
@@ -159,16 +162,15 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     function test_revertWhen_zapARBForLP_NoApproval() public {
         /** Arrange */
 
-        uint256 amount = 0.5 ether;
-        address fromAsset = WETH;
+        uint256 amount = 150e18;
+        address fromAsset = GMX;
         deal(fromAsset, user1, amount);
 
         uint256 minToToken = zapper.calcMinToAmountForZapIn(
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             fromAsset,
-            amount,
-            bytes("")
+            amount
         )
         .mul(998)
         .div(1000);
@@ -193,15 +195,14 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         /** Arrange */
 
         address fromAsset = WETH_ARB_LP;
-        address toAsset = WETH;
+        address toAsset = GMX;
         uint256 amount = 1 ether;
 
         uint256 minToToken = zapper.calcMinToAmountForZapOut(
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             toAsset,
-            amount,
-            bytes("")
+            amount
         )
         .mul(998)
         .div(1000);
@@ -225,7 +226,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     }
 
     function _zapIn(
-        WidoZapperUniswapV2 _zapper,
+        WidoZapperCamelot _zapper,
         address _fromAsset,
         uint256 _amountIn
     ) internal returns (uint256 minToToken){
@@ -236,8 +237,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             _fromAsset,
-            _amountIn,
-            bytes("")
+            _amountIn
         )
         .mul(996)
         .div(1000);
@@ -254,7 +254,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
     }
 
     function _zapOut(
-        WidoZapperUniswapV2 _zapper,
+        WidoZapperCamelot _zapper,
         address _fromAsset,
         address _toAsset,
         uint256 _amountIn
@@ -263,8 +263,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             _toAsset,
-            _amountIn,
-            bytes("")
+            _amountIn
         )
         .mul(998)
         .div(1000);
