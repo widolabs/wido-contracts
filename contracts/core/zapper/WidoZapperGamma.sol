@@ -299,7 +299,7 @@ contract WidoZapperGamma is WidoZapper {
         ).deposit(
             amount0,
             amount1,
-            msg.sender,
+            address(this),
             zap.pool,
             inMin
         );
