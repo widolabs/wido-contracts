@@ -112,6 +112,7 @@ contract WidoRouter is IWidoRouter, Ownable, ReentrancyGuard {
             uint256 value;
             if (step.fromToken == address(0)) {
                 value = address(this).balance;
+                balance = value;
             } else {
                 value = 0;
                 balance = ERC20(step.fromToken).balanceOf(address(this));
