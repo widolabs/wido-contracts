@@ -56,23 +56,6 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
     }
 
     /// @inheritdoc WidoZapperUniswapV2
-    /// @dev
-    ///  code is copied here from the VelodromeRouter because the function is defined as internal
-    ///  https://github.com/velodrome-finance/contracts/blob/master/contracts/Router.sol#L58
-    function _quote(
-        IUniswapV2Router02, //router
-        uint256 amountA,
-        uint256 reserveA,
-        uint256 reserveB
-    )
-    internal pure virtual override
-    returns (uint256 amountB) {
-        require(amountA > 0, 'Router: INSUFFICIENT_AMOUNT');
-        require(reserveA > 0 && reserveB > 0, 'Router: INSUFFICIENT_LIQUIDITY');
-        amountB = amountA * reserveB / reserveA;
-    }
-
-    /// @inheritdoc WidoZapperUniswapV2
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,

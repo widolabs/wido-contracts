@@ -12,8 +12,7 @@
 
 pragma solidity 0.8.7;
 
-import "./WidoZapperUniswapV2_2.sol";
-import "forge-std/Test.sol";
+import "./WidoZapperUniswapV2.sol";
 
 interface CamelotRouter {
     function getAmountsOut(uint amountIn, address[] calldata path) external pure returns (uint[] memory amounts);
@@ -32,20 +31,23 @@ interface CamelotRouter {
 
 /// @title Camelot pools Zapper
 /// @notice Add or remove liquidity from CamelotDEX pools using just one of the pool tokens
-contract WidoZapperCamelot is WidoZapperUniswapV2_2 {
+contract WidoZapperCamelot is WidoZapperUniswapV2 {
 
-    /// @dev This function swap amountIn through the path
+    /// @inheritdoc WidoZapperUniswapV2
     function _swap(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        address[] memory path,
+        address tokenIn,
+        address tokenOut,
         bytes memory //extra
     )
     internal virtual override
-    returns (uint256[] memory amounts) {
-        amounts = CamelotRouter(address(router)).getAmountsOut(amountIn, path);
-        console2.log(amountIn);
-        console2.log(amounts[0]);
+    returns (uint256 amountOut) {
+        address[] memory path = new address[](2);
+        path[0] = tokenIn;
+        path[1] = tokenOut;
+        uint256[] memory amounts = CamelotRouter(address(router)).getAmountsOut(amountIn, path);
+        amountOut = amounts[1];
         CamelotRouter(address(router)).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             amountIn,
             1,
@@ -56,17 +58,21 @@ contract WidoZapperCamelot is WidoZapperUniswapV2_2 {
         );
     }
 
-    /// @dev This function computes the amount out for a certain amount in
+    /// @inheritdoc WidoZapperUniswapV2
     function _getAmountOut(
         IUniswapV2Router02 router,
         uint256 amountIn,
-        uint256 reserveIn,
-        uint256 reserveOut,
-        address, // tokenIn,
-        address // tokenOut
+        Asset memory assetIn,
+        Asset memory assetOut,
+        bytes memory //extra
     )
     internal pure virtual override
     returns (uint256) {
-        return CamelotRouter(address(router)).quote(amountIn, reserveIn, reserveOut);
+        return CamelotRouter(address(router)).quote(amountIn, assetIn.reserves, assetOut.reserves);
+    }
+
+    /// @inheritdoc WidoZapperUniswapV2
+    function _feeBps() internal pure virtual override returns(uint256) {
+        return 5;
     }
 }

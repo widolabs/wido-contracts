@@ -34,10 +34,6 @@ contract WidoZapperUniswapV2 is WidoZapper {
         Asset memory asset0 = Asset(reserve0, pair.token0());
         Asset memory asset1 = Asset(reserve1, pair.token1());
 
-        // checking initial balance into `amount`, will be reusing the slot
-        uint256 amount0 = IERC20(asset0.token).balanceOf(address(pair));
-        uint256 amount1 = IERC20(asset1.token).balanceOf(address(pair));
-
         require(asset0.token == fromToken || asset1.token == fromToken, "Input token not present in liquidity pair");
 
         uint256 halfAmount0;
@@ -45,12 +41,18 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
         // stack too deep, so we can't store this bool
         if (asset0.token == fromToken) {
-            halfAmount0 = amount / 2;
-            halfAmount1 = _getAmountOut(router, halfAmount0, asset0, asset1, extra);
+            uint swapAmount = _getAmountToSwap(router, amount, asset0, asset1, extra);
+            halfAmount0 = amount - swapAmount;
+            halfAmount1 = _getAmountOut(router, swapAmount, asset0, asset1, extra);
         } else {
-            halfAmount1 = amount / 2;
-            halfAmount0 = _getAmountOut(router, halfAmount1, asset1, asset0, extra);
+            uint swapAmount = _getAmountToSwap(router, amount, asset1, asset0, extra);
+            halfAmount1 = amount - swapAmount;
+            halfAmount0 = _getAmountOut(router, swapAmount, asset1, asset0, extra);
         }
+
+        // checking initial balance into `amount`, will be reusing the slot
+        uint256 amount0 = IERC20(asset0.token).balanceOf(address(pair));
+        uint256 amount1 = IERC20(asset1.token).balanceOf(address(pair));
 
         amount0 = amount0 + halfAmount0 - reserve0;
         amount1 = amount1 + halfAmount1 - reserve1;
@@ -210,7 +212,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
     )
     internal virtual
     returns (uint256[] memory amounts) {
-        (uint256 reserveA, uint256 reserveB,) = pair.getReserves();
+        (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
         uint256 fullInvestment = IERC20(tokenA).balanceOf(address(this));
 
         Asset memory assetFrom;
@@ -218,11 +220,11 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
         // define direction of swap
         if (pair.token0() == tokenA) {
-            assetFrom = Asset(reserveA, tokenA);
-            assetTo = Asset(reserveB, tokenB);
+            assetFrom = Asset(reserve0, tokenA);
+            assetTo = Asset(reserve1, tokenB);
         } else {
-            assetFrom = Asset(reserveB, tokenA);
-            assetTo = Asset(reserveA, tokenB);
+            assetFrom = Asset(reserve1, tokenA);
+            assetTo = Asset(reserve0, tokenB);
         }
 
         // get amount of input token to be swapped
@@ -258,19 +260,15 @@ contract WidoZapperUniswapV2 is WidoZapper {
     )
     internal pure
     returns (uint256 swapAmount) {
-        uint256 halfInvestment = amountIn / 2;
-        uint256 nominator = _getAmountOut(router, halfInvestment, assetA, assetB, extra);
-        uint256 denominator = _quote(
-            router,
-            halfInvestment,
-            assetA.reserves.add(halfInvestment),
-            assetB.reserves.sub(nominator)
-        );
-        swapAmount = amountIn.sub(
+        uint256 fee = _feeBps();
+        uint256 twoMinusFee = 2000 - fee;
+        uint256 oneMinusFee = 1000 - fee;
+
+        swapAmount = (
             Babylonian.sqrt(
-                (halfInvestment * halfInvestment * nominator) / denominator
-            )
-        );
+                (twoMinusFee * twoMinusFee * assetA.reserves * assetA.reserves) + (4 * oneMinusFee * 1000 * amountIn * assetA.reserves)
+            ) - twoMinusFee.mul(assetA.reserves)
+        ) / (2 * oneMinusFee);
     }
 
     /// @dev Checks that the pair belongs to the factory
@@ -278,12 +276,9 @@ contract WidoZapperUniswapV2 is WidoZapper {
         require(pair.factory() == router.factory(), "Incompatible router and pair");
     }
 
-    /// @notice Quotes the expected amountB given a certain amountA, while the pool has the specified reserves
-    /// @dev This serves as an interface to quoting amountB on the router
-    function _quote(IUniswapV2Router02 router, uint256 amountA, uint256 reserveA, uint256 reserveB)
-    internal pure virtual
-    returns (uint256 amountB) {
-        return router.quote(amountA, reserveA, reserveB);
+    /// @dev Returns the fee BPS for a swap on the protocol
+    function _feeBps() internal pure virtual returns(uint256 bps) {
+        bps = 3;
     }
 
     /// @notice Computes the amount out for a certain amount in
