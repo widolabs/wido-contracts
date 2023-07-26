@@ -41,11 +41,11 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
         // stack too deep, so we can't store this bool
         if (asset0.token == fromToken) {
-            uint swapAmount = _getAmountToSwap(router, amount, asset0, asset1, extra);
+            uint swapAmount = _getAmountToSwap(pair, amount, asset0, true);
             halfAmount0 = amount - swapAmount;
             halfAmount1 = _getAmountOut(router, swapAmount, asset0, asset1, extra);
         } else {
-            uint swapAmount = _getAmountToSwap(router, amount, asset1, asset0, extra);
+            uint swapAmount = _getAmountToSwap(pair, amount, asset1, false);
             halfAmount1 = amount - swapAmount;
             halfAmount0 = _getAmountOut(router, swapAmount, asset1, asset0, extra);
         }
@@ -212,28 +212,25 @@ contract WidoZapperUniswapV2 is WidoZapper {
     )
     internal virtual
     returns (uint256[] memory amounts) {
-        (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
         uint256 fullInvestment = IERC20(tokenA).balanceOf(address(this));
 
         Asset memory assetFrom;
-        Asset memory assetTo;
 
         // define direction of swap
         if (pair.token0() == tokenA) {
+            (uint256 reserve0, ,) = pair.getReserves();
             assetFrom = Asset(reserve0, tokenA);
-            assetTo = Asset(reserve1, tokenB);
         } else {
+            (, uint256 reserve1,) = pair.getReserves();
             assetFrom = Asset(reserve1, tokenA);
-            assetTo = Asset(reserve0, tokenB);
         }
 
         // get amount of input token to be swapped
         uint256 swapAmountIn = _getAmountToSwap(
-            router,
+            pair,
             fullInvestment,
             assetFrom,
-            assetTo,
-            extra
+            pair.token0() == tokenA
         );
 
         _approveTokenIfNeeded(tokenA, address(router), swapAmountIn);
@@ -252,15 +249,14 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
     /// @notice Computes the amount of input tokens to swap to get a balanced position
     function _getAmountToSwap(
-        IUniswapV2Router02 router,
+        IUniswapV2Pair pair,
         uint256 amountIn,
         Asset memory assetA,
-        Asset memory assetB,
-        bytes memory extra
+        bool isFromToken0
     )
     internal pure
     returns (uint256 swapAmount) {
-        uint256 fee = _feeBps();
+        uint256 fee = _feeBps(pair, isFromToken0);
         uint256 twoMinusFee = 2000 - fee;
         uint256 oneMinusFee = 1000 - fee;
 
@@ -277,7 +273,10 @@ contract WidoZapperUniswapV2 is WidoZapper {
     }
 
     /// @dev Returns the fee BPS for a swap on the protocol
-    function _feeBps() internal pure virtual returns(uint256 bps) {
+    function _feeBps(
+        IUniswapV2Pair, //pair
+        bool //isFromToken0
+    ) internal pure virtual returns (uint256 bps) {
         bps = 3;
     }
 

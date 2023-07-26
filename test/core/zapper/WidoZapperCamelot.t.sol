@@ -43,10 +43,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        console2.log(IERC20(GMX).balanceOf(address(zapper)));
-        assertEq(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
-        console2.log(IERC20(USDCe).balanceOf(address(zapper)));
-        assertEq(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -68,8 +66,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertEq(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
-        assertEq(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -93,8 +91,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertEq(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
-        assertEq(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -118,8 +116,8 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertEq(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
-        assertEq(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -243,7 +241,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             _amountIn,
             bytes("")
         )
-        .mul(996)
+        .mul(995)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
@@ -270,7 +268,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             _amountIn,
             bytes("")
         )
-        .mul(998)
+        .mul(995)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);

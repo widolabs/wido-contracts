@@ -14,6 +14,14 @@ pragma solidity 0.8.7;
 
 import "./WidoZapperUniswapV2.sol";
 
+interface CamelotPair {
+    function FEE_DENOMINATOR() external pure returns (uint256);
+
+    function token0FeePercent() external pure returns (uint16);
+
+    function token1FeePercent() external pure returns (uint16);
+}
+
 interface CamelotRouter {
     function getAmountsOut(uint amountIn, address[] calldata path) external pure returns (uint[] memory amounts);
 
@@ -72,7 +80,15 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
     }
 
     /// @inheritdoc WidoZapperUniswapV2
-    function _feeBps() internal pure virtual override returns(uint256) {
-        return 5;
+    function _feeBps(
+        IUniswapV2Pair pair,
+        bool isFromToken0
+    ) internal pure virtual override returns (uint256) {
+        if (isFromToken0) {
+            return uint256(CamelotPair(address(pair)).token0FeePercent()) * 1000 / CamelotPair(address(pair)).FEE_DENOMINATOR();
+        }
+        else {
+            return uint256(CamelotPair(address(pair)).token1FeePercent()) * 1000 / CamelotPair(address(pair)).FEE_DENOMINATOR();
+        }
     }
 }
