@@ -109,6 +109,6 @@ contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
         bool //isFromToken0
     ) internal pure virtual override returns (uint256) {
         IPoolFactory factory = IPoolFactory(VelodromeV2Pair(address(pair)).factory());
-        return factory.getFee(address(pair), VelodromePair(address(pair)).stable()) * FEE_DENOMINATOR / 10000;
+        return factory.getFee(address(pair), VelodromePair(address(pair)).stable());
     }
 }
