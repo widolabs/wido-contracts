@@ -20,7 +20,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    uint256 internal constant FEE_DENOMINATOR = 1000000;
+    uint256 internal constant FEE_DENOMINATOR = 10_000;
 
     /// @inheritdoc WidoZapper
     function calcMinToAmountForZapIn(
@@ -274,13 +274,13 @@ contract WidoZapperUniswapV2 is WidoZapper {
         require(pair.factory() == router.factory(), "Incompatible router and pair");
     }
 
-    /// @dev Returns the fee BPS(per thousand) for a swap on the protocol
+    /// @dev Returns the fee BPS for a swap on the protocol
     function _feeBps(
         IUniswapV2Router02, //router
         IUniswapV2Pair, //pair
         bool //isFromToken0
     ) internal pure virtual returns (uint256 bps) {
-        bps = 3000;
+        bps = 30;
     }
 
     /// @notice Computes the amount out for a certain amount in

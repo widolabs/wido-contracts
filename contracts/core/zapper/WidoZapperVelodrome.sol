@@ -135,6 +135,6 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
         bool //isFromToken0
     ) internal pure virtual override returns (uint256) {
         VelodromePairFactory factory = VelodromePairFactory(VelodromeRouter(address(router)).factory());
-        return factory.getFee(VelodromePair(address(pair)).stable()) * FEE_DENOMINATOR / 10000;
+        return factory.getFee(VelodromePair(address(pair)).stable());
     }
 }
