@@ -81,14 +81,15 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
 
     /// @inheritdoc WidoZapperUniswapV2
     function _feeBps(
+        IUniswapV2Router02, //router
         IUniswapV2Pair pair,
         bool isFromToken0
     ) internal pure virtual override returns (uint256) {
         if (isFromToken0) {
-            return uint256(CamelotPair(address(pair)).token0FeePercent()) * 1000 / CamelotPair(address(pair)).FEE_DENOMINATOR();
+            return uint256(CamelotPair(address(pair)).token0FeePercent()) * FEE_DENOMINATOR / CamelotPair(address(pair)).FEE_DENOMINATOR();
         }
         else {
-            return uint256(CamelotPair(address(pair)).token1FeePercent()) * 1000 / CamelotPair(address(pair)).FEE_DENOMINATOR();
+            return uint256(CamelotPair(address(pair)).token1FeePercent()) * FEE_DENOMINATOR / CamelotPair(address(pair)).FEE_DENOMINATOR();
         }
     }
 }

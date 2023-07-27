@@ -20,6 +20,8 @@ contract WidoZapperUniswapV2 is WidoZapper {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    uint256 internal constant FEE_DENOMINATOR = 1000000;
+
     /// @inheritdoc WidoZapper
     function calcMinToAmountForZapIn(
         IUniswapV2Router02 router,
@@ -41,11 +43,11 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
         // stack too deep, so we can't store this bool
         if (asset0.token == fromToken) {
-            uint swapAmount = _getAmountToSwap(pair, amount, asset0, true);
+            uint swapAmount = _getAmountToSwap(router, pair, amount, asset0, true);
             halfAmount0 = amount - swapAmount;
             halfAmount1 = _getAmountOut(router, swapAmount, asset0, asset1, extra);
         } else {
-            uint swapAmount = _getAmountToSwap(pair, amount, asset1, false);
+            uint swapAmount = _getAmountToSwap(router, pair, amount, asset1, false);
             halfAmount1 = amount - swapAmount;
             halfAmount0 = _getAmountOut(router, swapAmount, asset1, asset0, extra);
         }
@@ -227,6 +229,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
         // get amount of input token to be swapped
         uint256 swapAmountIn = _getAmountToSwap(
+            router,
             pair,
             fullInvestment,
             assetFrom,
@@ -249,6 +252,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
     /// @notice Computes the amount of input tokens to swap to get a balanced position
     function _getAmountToSwap(
+        IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         uint256 amountIn,
         Asset memory assetA,
@@ -256,14 +260,15 @@ contract WidoZapperUniswapV2 is WidoZapper {
     )
     internal pure
     returns (uint256 swapAmount) {
-        uint256 fee = _feeBps(pair, isFromToken0);
-        uint256 twoMinusFee = 2000 - fee;
-        uint256 oneMinusFee = 1000 - fee;
+        uint256 fee = _feeBps(router, pair, isFromToken0);
+        uint256 twoMinusFee = 2 * FEE_DENOMINATOR - fee;
+        uint256 oneMinusFee = 1 * FEE_DENOMINATOR - fee;
 
         swapAmount = (
-            Babylonian.sqrt(
-                (twoMinusFee * twoMinusFee * assetA.reserves * assetA.reserves) + (4 * oneMinusFee * 1000 * amountIn * assetA.reserves)
-            ) - twoMinusFee.mul(assetA.reserves)
+        Babylonian.sqrt(
+            (twoMinusFee * twoMinusFee * assetA.reserves * assetA.reserves)
+            + (4 * oneMinusFee * FEE_DENOMINATOR * amountIn * assetA.reserves)
+        ) - twoMinusFee.mul(assetA.reserves)
         ) / (2 * oneMinusFee);
     }
 
@@ -272,12 +277,13 @@ contract WidoZapperUniswapV2 is WidoZapper {
         require(pair.factory() == router.factory(), "Incompatible router and pair");
     }
 
-    /// @dev Returns the fee BPS for a swap on the protocol
+    /// @dev Returns the fee BPS(per thousand) for a swap on the protocol
     function _feeBps(
+        IUniswapV2Router02, //router
         IUniswapV2Pair, //pair
         bool //isFromToken0
     ) internal pure virtual returns (uint256 bps) {
-        bps = 3;
+        bps = 3000;
     }
 
     /// @notice Computes the amount out for a certain amount in
