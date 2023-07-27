@@ -52,8 +52,11 @@ contract WidoZapperUniswapV2 is WidoZapper {
             halfAmount0 = _getAmountOut(router, swapAmount, asset1, asset0, extra);
         }
 
-        uint256 amount0 = IERC20(asset0.token).balanceOf(address(pair)) + halfAmount0 - reserve0;
-        uint256 amount1 = IERC20(asset1.token).balanceOf(address(pair)) + halfAmount1 - reserve1;
+        uint256 amount0 = IERC20(asset0.token).balanceOf(address(pair));
+        uint256 amount1 = IERC20(asset1.token).balanceOf(address(pair));
+
+        amount0 = amount0 + halfAmount0 - reserve0;
+        amount1 = amount1 + halfAmount1 - reserve1;
 
         uint256 lpTotalSupply = pair.totalSupply();
         return Math.min(amount0.mul(lpTotalSupply) / reserve0, amount1.mul(lpTotalSupply) / reserve1);
