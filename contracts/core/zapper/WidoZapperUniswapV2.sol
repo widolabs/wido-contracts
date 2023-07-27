@@ -85,16 +85,18 @@ contract WidoZapperUniswapV2 is WidoZapper {
 
         if (isZapToToken0) {
             amount0 = (lpAmount * reserve0) / lpTotalSupply;
+            uint amt1Out = (lpAmount * reserve1) / lpTotalSupply;
             amount1 = _getAmountOut(
                 router,
-                (lpAmount * reserve1) / lpTotalSupply,
+                (lpAmount * (reserve1 - amt1Out)) / (lpTotalSupply - lpAmount),
                 asset1, asset0,
                 extra
             );
         } else {
+            uint amt0Out = (lpAmount * reserve0) / lpTotalSupply;
             amount0 = _getAmountOut(
                 router,
-                (lpAmount * reserve0) / lpTotalSupply,
+                (lpAmount * (reserve0 - amt0Out)) / (lpTotalSupply - lpAmount),
                 asset0, asset1,
                 extra
             );
