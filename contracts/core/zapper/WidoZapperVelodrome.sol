@@ -14,6 +14,14 @@ pragma solidity 0.8.7;
 
 import "./WidoZapperUniswapV2.sol";
 
+interface VelodromePair {
+    function stable() external pure returns (bool);
+}
+
+interface VelodromePairFactory {
+    function getFee(bool stable) external pure returns (uint256);
+}
+
 interface VelodromeRouter {
 
     struct route {
@@ -21,6 +29,8 @@ interface VelodromeRouter {
         address to;
         bool stable;
     }
+
+    function factory() external pure returns (address);
 
     function getAmountOut(uint amountIn, address tokenIn, address tokenOut) external pure returns (uint amount, bool stable);
 
@@ -116,5 +126,15 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
             block.timestamp
         );
         amountOut = amounts[1];
+    }
+
+    /// @inheritdoc WidoZapperUniswapV2
+    function _feeBps(
+        IUniswapV2Router02 router,
+        IUniswapV2Pair pair,
+        bool //isFromToken0
+    ) internal pure virtual override returns (uint256) {
+        VelodromePairFactory factory = VelodromePairFactory(VelodromeRouter(address(router)).factory());
+        return factory.getFee(VelodromePair(address(pair)).stable()) * FEE_DENOMINATOR / 10000;
     }
 }
