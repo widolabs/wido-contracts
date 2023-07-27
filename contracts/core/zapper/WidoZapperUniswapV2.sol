@@ -45,11 +45,11 @@ contract WidoZapperUniswapV2 is WidoZapper {
         if (asset0.token == fromToken) {
             uint swapAmount = _getAmountToSwap(router, pair, amount, asset0, true);
             halfAmount0 = amount - swapAmount;
-            halfAmount1 = _getAmountOut(router, swapAmount, asset0, asset1, extra);
+            halfAmount1 = _getAmountOut(router, pair, swapAmount, asset0, asset1, extra);
         } else {
             uint swapAmount = _getAmountToSwap(router, pair, amount, asset1, false);
             halfAmount1 = amount - swapAmount;
-            halfAmount0 = _getAmountOut(router, swapAmount, asset1, asset0, extra);
+            halfAmount0 = _getAmountOut(router, pair, swapAmount, asset1, asset0, extra);
         }
 
         uint256 amount0 = IERC20(asset0.token).balanceOf(address(pair));
@@ -72,33 +72,42 @@ contract WidoZapperUniswapV2 is WidoZapper {
     )
     external view virtual override
     returns (uint256 minToToken) {
-        (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
-        uint256 lpTotalSupply = pair.totalSupply();
-
         bool isZapToToken0 = pair.token0() == toToken;
         require(isZapToToken0 || pair.token1() == toToken, "Input token not present in liquidity pair");
 
         uint256 amount0;
         uint256 amount1;
-        Asset memory asset0 = Asset(reserve0, pair.token0());
-        Asset memory asset1 = Asset(reserve1, pair.token1());
+        Asset memory asset0;
+        Asset memory asset1;
+
+        {
+            (uint256 reserve0, uint256 reserve1,) = pair.getReserves();
+            uint256 lpTotalSupply = pair.totalSupply();
+            if (lpAmount > lpTotalSupply) {
+                revert NotEnoughSupply();
+            }
+            amount0 = (lpAmount * reserve0) / lpTotalSupply;
+            amount1 = (lpAmount * reserve1) / lpTotalSupply;
+            asset0 = Asset(reserve0 - amount0, pair.token0());
+            asset1 = Asset(reserve1 - amount1, pair.token1());
+        }
 
         if (isZapToToken0) {
-            amount0 = (lpAmount * reserve0) / lpTotalSupply;
             amount1 = _getAmountOut(
                 router,
-                (lpAmount * reserve1) / lpTotalSupply,
+                pair,
+                amount1,
                 asset1, asset0,
                 extra
             );
         } else {
             amount0 = _getAmountOut(
                 router,
-                (lpAmount * reserve0) / lpTotalSupply,
+                pair,
+                amount0,
                 asset0, asset1,
                 extra
             );
-            amount1 = (lpAmount * reserve1) / lpTotalSupply;
         }
 
         return amount0 + amount1;
@@ -290,12 +299,13 @@ contract WidoZapperUniswapV2 is WidoZapper {
     /// @dev This serves as an interface for quoting max amount out
     function _getAmountOut(
         IUniswapV2Router02 router,
+        IUniswapV2Pair, //pair
         uint256 amountIn,
         Asset memory assetIn,
         Asset memory assetOut,
         bytes memory //extra
     )
-    internal pure virtual
+    internal view virtual
     returns (uint256 amountOut) {
         return router.getAmountOut(amountIn, assetIn.reserves, assetOut.reserves);
     }

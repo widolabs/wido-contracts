@@ -196,7 +196,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
 
         address fromAsset = WETH_ARB_LP;
         address toAsset = GMX;
-        uint256 amount = 1 ether;
+        uint256 amount = 0.01 ether;
 
         uint256 minToToken = zapper.calcMinToAmountForZapOut(
             IUniswapV2Router02(CAMELOT_ROUTER),

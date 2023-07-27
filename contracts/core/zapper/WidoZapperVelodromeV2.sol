@@ -57,12 +57,13 @@ contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
     /// @inheritdoc WidoZapperUniswapV2
     function _getAmountOut(
         IUniswapV2Router02 router,
+        IUniswapV2Pair, //pair
         uint256 amountIn,
         Asset memory assetIn,
         Asset memory assetOut,
         bytes memory extra
     )
-    internal pure virtual override
+    internal view virtual override
     returns (uint256 amountOut) {
         VelodromeV2Router.Route[] memory routes = new VelodromeV2Router.Route[](1);
         routes[0] = VelodromeV2Router.Route({

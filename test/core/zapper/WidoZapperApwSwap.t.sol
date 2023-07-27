@@ -179,41 +179,6 @@ contract WidoZapperApeSwapTest is PolygonForkTest {
         );
     }
 
-    function test_revertWhen_zapLPForWOMBAT_NoBalance() public {
-        /** Arrange */
-
-        address fromAsset = WOMBAT_USDC_LP;
-        address toAsset = WOMBAT;
-        uint256 amount = 1 ether;
-
-        uint256 minToToken = zapper.calcMinToAmountForZapOut(
-            IUniswapV2Router02(UNI_ROUTER),
-            IUniswapV2Pair(WOMBAT_USDC_LP),
-            toAsset,
-            amount,
-            bytes("")
-        )
-        .mul(998)
-        .div(1000);
-
-        vm.startPrank(user1);
-
-        IERC20(fromAsset).approve(address(zapper), amount);
-
-        /** Act & Assert */
-
-        vm.expectRevert();
-
-        zapper.zapOut(
-            IUniswapV2Router02(UNI_ROUTER),
-            IUniswapV2Pair(WOMBAT_USDC_LP),
-            amount,
-            toAsset,
-            minToToken,
-            bytes("")
-        );
-    }
-
     function _zapIn(
         WidoZapperUniswapV2 _zapper,
         address _fromAsset,

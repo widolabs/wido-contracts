@@ -69,12 +69,13 @@ contract WidoZapperCamelot is WidoZapperUniswapV2 {
     /// @inheritdoc WidoZapperUniswapV2
     function _getAmountOut(
         IUniswapV2Router02 router,
+        IUniswapV2Pair, //pair
         uint256 amountIn,
         Asset memory assetIn,
         Asset memory assetOut,
         bytes memory //extra
     )
-    internal pure virtual override
+    internal view virtual override
     returns (uint256) {
         return CamelotRouter(address(router)).quote(amountIn, assetIn.reserves, assetOut.reserves);
     }
