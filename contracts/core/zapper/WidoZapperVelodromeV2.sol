@@ -14,6 +14,14 @@ pragma solidity 0.8.7;
 
 import "./WidoZapperVelodrome.sol";
 
+interface IPoolFactory {
+    function getFee(address _pool, bool _stable) external pure returns (uint256);
+}
+
+interface VelodromeV2Pair {
+    function factory() external pure returns (address);
+}
+
 interface VelodromeV2Router {
 
     struct Route {
@@ -92,5 +100,15 @@ contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
             block.timestamp
         );
         amountOut = amounts[1];
+    }
+
+    /// @inheritdoc WidoZapperUniswapV2
+    function _feeBps(
+        IUniswapV2Router02, //router
+        IUniswapV2Pair pair,
+        bool //isFromToken0
+    ) internal pure virtual override returns (uint256) {
+        IPoolFactory factory = IPoolFactory(VelodromeV2Pair(address(pair)).factory());
+        return factory.getFee(address(pair), VelodromePair(address(pair)).stable()) * FEE_DENOMINATOR / 10000;
     }
 }

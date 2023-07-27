@@ -264,11 +264,12 @@ contract WidoZapperUniswapV2 is WidoZapper {
         uint256 twoMinusFee = 2 * FEE_DENOMINATOR - fee;
         uint256 oneMinusFee = 1 * FEE_DENOMINATOR - fee;
 
+        // https://blog.alphaventuredao.io/onesideduniswap/
         swapAmount = (
-        Babylonian.sqrt(
-            (twoMinusFee * twoMinusFee * assetA.reserves * assetA.reserves)
-            + (4 * oneMinusFee * FEE_DENOMINATOR * amountIn * assetA.reserves)
-        ) - twoMinusFee.mul(assetA.reserves)
+            Babylonian.sqrt(
+                (twoMinusFee * twoMinusFee * assetA.reserves * assetA.reserves)
+                + (4 * oneMinusFee * FEE_DENOMINATOR * amountIn * assetA.reserves)
+            ) - twoMinusFee.mul(assetA.reserves)
         ) / (2 * oneMinusFee);
     }
 
