@@ -130,8 +130,7 @@ contract WidoZapperVelodromeV1 is WidoZapperUniswapV2 {
         IUniswapV2Pair pair,
         bool //isFromToken0
     ) internal pure virtual override returns (uint256) {
-        VelodromePairFactory factory = VelodromePairFactory(VelodromeRouter(address(router)).factory());
-        return factory.getFee(VelodromePair(address(pair)).stable());
+        return VelodromePairFactory(VelodromeRouter(address(router)).factory()).getFee(VelodromePair(address(pair)).stable());
     }
 
     /// @inheritdoc WidoZapperUniswapV2
@@ -145,12 +144,11 @@ contract WidoZapperVelodromeV1 is WidoZapperUniswapV2 {
     )
     internal view virtual override
     returns (uint256 amountOut) {
-        VelodromePairFactory factory = VelodromePairFactory(VelodromeRouter(address(router)).factory());
         bool stable = VelodromePair(address(pair)).stable();
         uint reserve0;
         uint reserve1;
 
-        if (VelodromePair(address(pair)).token0() == assetIn.token){
+        if (VelodromePair(address(pair)).token0() == assetIn.token) {
             reserve0 = assetIn.reserves;
             reserve1 = assetOut.reserves;
         }
@@ -161,7 +159,7 @@ contract WidoZapperVelodromeV1 is WidoZapperUniswapV2 {
 
         // remove fee from amount received
         // we use the denominator used by Velodrome
-        amountIn -= amountIn * factory.getFee(stable) / 10_000;
+        amountIn -= amountIn * VelodromePairFactory(VelodromeRouter(address(router)).factory()).getFee(stable) / 10_000;
 
         return __getAmountOut(amountIn, assetIn.token, VelodromePair(address(pair)), reserve0, reserve1, stable);
     }
@@ -241,6 +239,6 @@ contract WidoZapperVelodromeV1 is WidoZapperUniswapV2 {
     }
 
     function _f(uint x0, uint y) internal pure returns (uint) {
-        return x0*(y*y/1e18*y/1e18)/1e18+(x0*x0/1e18*x0/1e18)*y/1e18;
+        return x0 * (y * y / 1e18 * y / 1e18) / 1e18 + (x0 * x0 / 1e18 * x0 / 1e18) * y / 1e18;
     }
 }
