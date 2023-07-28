@@ -110,9 +110,9 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
     returns (uint256 amountOut) {
         VelodromeRouter.route[] memory routes = new VelodromeRouter.route[](1);
         routes[0] = VelodromeRouter.route({
-        from : tokenIn,
-        to : tokenOut,
-        stable : abi.decode(extra, (bool))
+            from : tokenIn,
+            to : tokenOut,
+            stable : abi.decode(extra, (bool))
         });
         uint256[] memory amounts = VelodromeRouter(address(router)).swapExactTokensForTokens(
             amountIn,
@@ -159,7 +159,9 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
             reserve1 = assetIn.reserves;
         }
 
-        amountIn -= amountIn * factory.getFee(stable) / 10000; // remove fee from amount received
+        // remove fee from amount received
+        // we use the denominator used by Velodrome
+        amountIn -= amountIn * factory.getFee(stable) / 10_000;
 
         return __getAmountOut(amountIn, assetIn.token, VelodromePair(address(pair)), reserve0, reserve1, stable);
     }
@@ -170,7 +172,7 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
     // The reason to copy the logic into our contract is:
     // We want to get the estimated amountOut of a swap that will happen after a withdrawal,
     // if we use the function from Velodrome's contract, it uses the reserves existing prior withdraw.
-    // The only way to be able to estimate correctly is to bring the logic here and use the updated reserve values.
+    // The only way to estimate correctly is to bring the logic here and use the updated reserve values post withdrawal.
 
     function __getAmountOut(
         uint amountIn,
@@ -241,5 +243,4 @@ contract WidoZapperVelodrome is WidoZapperUniswapV2 {
     function _f(uint x0, uint y) internal pure returns (uint) {
         return x0*(y*y/1e18*y/1e18)/1e18+(x0*x0/1e18*x0/1e18)*y/1e18;
     }
-
 }
