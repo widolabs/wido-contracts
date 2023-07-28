@@ -26,6 +26,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
     }
 
     function test_zapUSDCForLP() public {
+
         /** Arrange */
 
         uint256 amount = 150_000_000;
@@ -41,11 +42,15 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
     function test_zapWETHForLP() public {
+
         /** Arrange */
 
         uint256 amount = 0.5 ether;
@@ -61,11 +66,15 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(WETH).balanceOf(address(zapper)), 2, "Dust");
+
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
     function test_zapLPForUSDC() public {
+
         /** Arrange */
 
         _zapIn(zapper, USDC, 150_000_000);
@@ -83,11 +92,15 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
     function test_zapLPForWETH() public {
+
         /** Arrange */
 
         _zapIn(zapper, WETH, 0.5 ether);
@@ -105,11 +118,15 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(WETH).balanceOf(address(zapper)), 2, "Dust");
+
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
     function test_revertWhen_zapWETHForLP_HasHighSlippage() public {
+
         /** Arrange */
 
         uint256 amount = 0.5 ether;
@@ -145,6 +162,7 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
     }
 
     function test_revertWhen_zapWETHForLP_NoApproval() public {
+
         /** Arrange */
 
         uint256 amount = 0.5 ether;
@@ -178,11 +196,12 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
     }
 
     function test_revertWhen_zapLPForWETH_NoBalance() public {
+
         /** Arrange */
 
         address fromAsset = USDC_WETH_LP;
         address toAsset = WETH;
-        uint256 amount = 1 ether;
+        uint256 amount = 0.1 ether;
 
         uint256 minToToken = zapper.calcMinToAmountForZapOut(
             IUniswapV2Router02(UNI_ROUTER),
@@ -208,6 +227,26 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
             amount,
             toAsset,
             minToToken,
+            bytes("")
+        );
+    }
+
+    function test_revertWhen_notEnoughLPSupply() public {
+
+        /** Arrange */
+
+        address toAsset = WETH;
+        uint256 amount = 10 ether;
+
+        /** Act & Assert */
+
+        vm.expectRevert();
+
+        zapper.calcMinToAmountForZapOut(
+            IUniswapV2Router02(UNI_ROUTER),
+            IUniswapV2Pair(USDC_WETH_LP),
+            toAsset,
+            amount,
             bytes("")
         );
     }

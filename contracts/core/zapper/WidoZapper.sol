@@ -24,6 +24,8 @@ abstract contract WidoZapper {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    error NotEnoughSupply();
+
     struct Asset {
         uint256 reserves;
         address token;

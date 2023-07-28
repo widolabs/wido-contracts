@@ -43,9 +43,6 @@ contract WidoZapperGammaTest is PolygonForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        console2.log(IERC20(WETH).balanceOf(address(zapper)));
-        console2.log(IERC20(USDC).balanceOf(address(zapper)));
-
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
@@ -65,7 +62,6 @@ contract WidoZapperGammaTest is PolygonForkTest {
 
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
-
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");

@@ -5,12 +5,12 @@ import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../shared/OptimismForkTest.sol";
-import "../../../contracts/core/zapper/WidoZapperVelodrome.sol";
+import "../../../contracts/core/zapper/WidoZapperVelodromeV1.sol";
 
 contract WidoZapperVelodromeTest is OptimismForkTest {
     using SafeMath for uint256;
 
-    WidoZapperVelodrome zapper;
+    WidoZapperVelodromeV1 zapper;
 
     address constant VELO_ROUTER = address(0xa132DAB612dB5cB9fC9Ac426A0Cc215A3423F9c9);
     address constant WBTC_USDC_LP = address(0x4C8B195d33c6F95A8262D56Ede793611ee7b5AAD);
@@ -18,7 +18,7 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
     function setUp() public {
         setUpBase();
 
-        zapper = new WidoZapperVelodrome();
+        zapper = new WidoZapperVelodromeV1();
         vm.label(address(zapper), "Zapper");
 
         vm.label(VELO_ROUTER, "VELO_ROUTER");
@@ -41,6 +41,9 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
+        assertLe(IERC20(WBTC).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 4000, "Dust");
+
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
@@ -60,6 +63,9 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
 
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
+
+        assertLe(IERC20(WBTC).balanceOf(address(zapper)), 20, "Dust");
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -83,6 +89,9 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
+        assertLe(IERC20(WBTC).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
@@ -104,6 +113,9 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
 
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
+
+        assertLe(IERC20(WBTC).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -182,7 +194,7 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
 
         address fromAsset = WBTC_USDC_LP;
         address toAsset = WBTC;
-        uint256 amount = 1 ether;
+        uint256 amount = 3_000_080;
 
         uint256 minToToken = zapper.calcMinToAmountForZapOut(
             IUniswapV2Router02(VELO_ROUTER),
@@ -252,7 +264,7 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
             IUniswapV2Pair(WBTC_USDC_LP),
             _toAsset,
             _amountIn,
-            bytes("")
+            abi.encode(false)
         )
         .mul(998)
         .div(1000);
