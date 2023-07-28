@@ -223,11 +223,11 @@ contract WidoZapperUniswapV2 is WidoZapper {
     internal virtual
     returns (uint256[] memory amounts) {
         uint256 fullInvestment = IERC20(tokenA).balanceOf(address(this));
-
+        bool isFromToken0 = pair.token0() == tokenA;
         Asset memory assetFrom;
 
         // define direction of swap
-        if (pair.token0() == tokenA) {
+        if (isFromToken0) {
             (uint256 reserve0, ,) = pair.getReserves();
             assetFrom = Asset(reserve0, tokenA);
         } else {
@@ -241,7 +241,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
             pair,
             fullInvestment,
             assetFrom,
-            pair.token0() == tokenA
+            isFromToken0
         );
 
         _approveTokenIfNeeded(tokenA, address(router), swapAmountIn);

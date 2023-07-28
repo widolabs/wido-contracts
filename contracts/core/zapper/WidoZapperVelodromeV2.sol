@@ -12,7 +12,7 @@
 
 pragma solidity 0.8.7;
 
-import "./WidoZapperVelodrome.sol";
+import "./WidoZapperVelodromeV1.sol";
 
 interface IPoolFactory {
     function getFee(address _pool, bool _stable) external pure returns (uint256);
@@ -46,7 +46,7 @@ interface VelodromeV2Router {
 
 /// @title VelodromeV2 pools Zapper
 /// @notice Add or remove liquidity from Velodrome V2 pools using just one of the pool tokens
-contract WidoZapperVelodromeV2 is WidoZapperVelodrome {
+contract WidoZapperVelodromeV2 is WidoZapperVelodromeV1 {
 
     /// @inheritdoc WidoZapperUniswapV2
     function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair)

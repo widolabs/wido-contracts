@@ -2,7 +2,7 @@
 pragma solidity 0.8.7;
 
 import "forge-std/Script.sol";
-import "../../../contracts/core/zapper/WidoZapperVelodrome.sol";
+import "../../../contracts/core/zapper/WidoZapperVelodromeV1.sol";
 
 contract WidoZapperVelodromeScript is Script {
     function setUp() public {}
@@ -11,7 +11,7 @@ contract WidoZapperVelodromeScript is Script {
         uint256 deployerKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerKey);
 
-        new WidoZapperVelodrome();
+        new WidoZapperVelodromeV1();
 
         vm.stopBroadcast();
     }

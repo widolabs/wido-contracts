@@ -65,8 +65,8 @@ interface VelodromeRouter {
 }
 
 /// @title Velodrome pools Zapper
-/// @notice Add or remove liquidity from Velodrome pools using just one of the pool tokens
-contract WidoZapperVelodrome is WidoZapperUniswapV2 {
+/// @notice Add or remove liquidity from VelodromeV1 pools using just one of the pool tokens
+contract WidoZapperVelodromeV1 is WidoZapperUniswapV2 {
 
     /// @inheritdoc WidoZapperUniswapV2
     function _requires(IUniswapV2Router02 router, IUniswapV2Pair pair)

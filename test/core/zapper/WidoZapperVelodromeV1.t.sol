@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../shared/OptimismForkTest.sol";
-import "../../../contracts/core/zapper/WidoZapperVelodrome.sol";
+import "../../../contracts/core/zapper/WidoZapperVelodromeV1.sol";
 
 contract WidoZapperVelodromeTest is OptimismForkTest {
     using SafeMath for uint256;
