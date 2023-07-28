@@ -194,7 +194,7 @@ contract WidoZapperApeSwapTest is PolygonForkTest {
             _amountIn,
             bytes("")
         )
-        .mul(998)
+        .mul(997)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
@@ -221,7 +221,7 @@ contract WidoZapperApeSwapTest is PolygonForkTest {
             _amountIn,
             bytes("")
         )
-        .mul(998)
+        .mul(997)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);

@@ -10,7 +10,7 @@ import "../../../contracts/core/zapper/WidoZapperVelodromeV1.sol";
 contract WidoZapperVelodromeTest is OptimismForkTest {
     using SafeMath for uint256;
 
-    WidoZapperVelodrome zapper;
+    WidoZapperVelodromeV1 zapper;
 
     address constant VELO_ROUTER = address(0xa132DAB612dB5cB9fC9Ac426A0Cc215A3423F9c9);
     address constant WBTC_USDC_LP = address(0x4C8B195d33c6F95A8262D56Ede793611ee7b5AAD);
@@ -18,7 +18,7 @@ contract WidoZapperVelodromeTest is OptimismForkTest {
     function setUp() public {
         setUpBase();
 
-        zapper = new WidoZapperVelodrome();
+        zapper = new WidoZapperVelodromeV1();
         vm.label(address(zapper), "Zapper");
 
         vm.label(VELO_ROUTER, "VELO_ROUTER");

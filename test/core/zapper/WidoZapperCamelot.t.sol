@@ -27,7 +27,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         vm.label(WETH_ARB_LP, "WETH_ARB_LP");
     }
 
-    function test_zapARBForLP() public {
+    function test_zapGMXForLP() public {
         /** Arrange */
 
         uint256 amount = 150e18;
@@ -43,14 +43,14 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
         assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapWETHForLP() public {
+    function test_zapUSDCForLP() public {
         /** Arrange */
 
         uint256 amount = 13704e6;
@@ -66,14 +66,14 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
         assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapLPForARB() public {
+    function test_zapLPForGMX() public {
         /** Arrange */
 
         _zapIn(zapper, GMX, 15e18);
@@ -92,13 +92,13 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
         assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
-        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapLPForWETH() public {
+    function test_zapLPForUSDC() public {
         /** Arrange */
 
         _zapIn(zapper, USDCe, 150e6);
@@ -116,7 +116,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
         assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
