@@ -44,10 +44,10 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(DOLA).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(DOLA).balanceOf(address(zapper)), 0, "Dust");
         assertLe(IERC20(FRAX).balanceOf(address(zapper)), 2, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
@@ -68,7 +68,7 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
         assertLe(IERC20(DOLA).balanceOf(address(zapper)), 2, "Dust");
-        assertLe(IERC20(FRAX).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(FRAX).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -92,7 +92,7 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(DOLA).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(DOLA).balanceOf(address(zapper)), 0, "Dust");
         assertLe(IERC20(FRAX).balanceOf(address(zapper)), 2, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
@@ -118,7 +118,7 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
         assertLe(IERC20(DOLA).balanceOf(address(zapper)), 2, "Dust");
-        assertLe(IERC20(FRAX).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(FRAX).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");

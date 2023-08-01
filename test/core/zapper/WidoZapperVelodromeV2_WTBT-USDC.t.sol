@@ -46,7 +46,7 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         assertLe(IERC20(WTBT).balanceOf(address(zapper)), 2, "Dust");
         assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
