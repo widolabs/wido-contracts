@@ -150,6 +150,7 @@ contract WidoZapperVerseTest is MainnetForkTest {
             IUniswapV2Router02(VERSE_ROUTER),
             IUniswapV2Pair(USDC_WETH_LP),
             fromAsset,
+            user1,
             amount,
             minToToken,
             bytes("")
@@ -183,6 +184,7 @@ contract WidoZapperVerseTest is MainnetForkTest {
             IUniswapV2Router02(VERSE_ROUTER),
             IUniswapV2Pair(USDC_WETH_LP),
             fromAsset,
+            user1,
             amount,
             minToToken,
             bytes("")
@@ -247,6 +249,7 @@ contract WidoZapperVerseTest is MainnetForkTest {
             IUniswapV2Router02(VERSE_ROUTER),
             IUniswapV2Pair(USDC_WETH_LP),
             _fromAsset,
+            user1,
             _amountIn,
             minToToken,
             bytes("")

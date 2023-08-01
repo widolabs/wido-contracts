@@ -13,26 +13,26 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
     WidoZapperVelodromeV2 zapper;
 
     address constant VELO_V2_ROUTER = address(0xa062aE8A9c5e11aaA026fc2670B0D65cCc8B2858);
-    address constant WTBT_USDC_LP = address(0x5e6E17F745fF620E87324b7c6ec672B5743BD0B4);
-    address constant WTBT = address(0xdb4eA87fF83eB1c80b8976FC47731Da6a31D35e5);
+    address constant DOLA_USDC_LP = address(0xB720FBC32d60BB6dcc955Be86b98D8fD3c4bA645);
+    address constant DOLA = address(0x8aE125E8653821E851F12A49F7765db9a9ce7384);
 
     function setUp() public {
         setUpBase();
 
         zapper = new WidoZapperVelodromeV2();
         vm.label(address(zapper), "Zapper");
-
         vm.label(VELO_V2_ROUTER, "VELO_V2_ROUTER");
-        vm.label(WTBT_USDC_LP, "WTBT_USDC_LP");
-        vm.label(WTBT, "WTBT");
+
+        vm.label(DOLA_USDC_LP, "DOLA_USDC_LP");
+        vm.label(DOLA, "DOLA");
     }
 
     function test_zapUSDCForLP() public {
         /** Arrange */
 
-        uint256 amount = 50_000_000;
+        uint256 amount = 5e18;
         address fromAsset = USDC;
-        address toAsset = WTBT_USDC_LP;
+        address toAsset = DOLA_USDC_LP;
 
         /** Act */
 
@@ -43,19 +43,19 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(WTBT).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(DOLA).balanceOf(address(zapper)), 0, "Dust");
         assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapWTBTForLP() public {
+    function test_zapDOLAForLP() public {
         /** Arrange */
 
-        uint256 amount = 1e18;
-        address fromAsset = WTBT;
-        address toAsset = WTBT_USDC_LP;
+        uint256 amount = 8e18;
+        address fromAsset = DOLA;
+        address toAsset = DOLA_USDC_LP;
 
         /** Act */
 
@@ -66,8 +66,8 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(WTBT).balanceOf(address(zapper)), 2, "Dust");
-        assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(DOLA).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
@@ -76,9 +76,9 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
     function test_zapLPForUSDC() public {
         /** Arrange */
 
-        _zapIn(zapper, USDC, 50_000_000);
+        _zapIn(zapper, USDC, 50e6);
 
-        address fromAsset = WTBT_USDC_LP;
+        address fromAsset = DOLA_USDC_LP;
         address toAsset = USDC;
         uint256 amount = IERC20(fromAsset).balanceOf(user1);
 
@@ -91,20 +91,20 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(WTBT).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(DOLA).balanceOf(address(zapper)), 0, "Dust");
         assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_zapLPForWTBT() public {
+    function test_zapLPForDOLA() public {
         /** Arrange */
 
-        _zapIn(zapper, WTBT, 1e18);
+        _zapIn(zapper, DOLA, 10e18);
 
-        address fromAsset = WTBT_USDC_LP;
-        address toAsset = WTBT;
+        address fromAsset = DOLA_USDC_LP;
+        address toAsset = DOLA;
         uint256 amount = IERC20(fromAsset).balanceOf(user1);
 
         /** Act */
@@ -116,26 +116,26 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(WTBT).balanceOf(address(zapper)), 2, "Dust");
-        assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(DOLA).balanceOf(address(zapper)), 2, "Dust");
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
 
         assertEq(finalFromBalance, 0, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
-    function test_revertWhen_zapWTBTForLP_HasHighSlippage() public {
+    function test_revertWhen_zapDOLAForLP_HasHighSlippage() public {
         /** Arrange */
 
         uint256 amount = 200_000;
-        address fromAsset = WTBT;
+        address fromAsset = DOLA;
         deal(fromAsset, user1, amount);
 
         uint256 minToToken = zapper.calcMinToAmountForZapIn(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             fromAsset,
             amount,
-            abi.encode(false)
+            abi.encode(true)
         )
         .mul(1001)
         .div(1000);
@@ -150,27 +150,28 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
 
         zapper.zapIn(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             fromAsset,
+            user1,
             amount,
             minToToken,
-            abi.encode(false)
+            abi.encode(true)
         );
     }
 
-    function test_revertWhen_zapWTBTForLP_NoApproval() public {
+    function test_revertWhen_zapDOLAForLP_NoApproval() public {
         /** Arrange */
 
         uint256 amount = 200_000;
-        address fromAsset = WTBT;
+        address fromAsset = DOLA;
         deal(fromAsset, user1, amount);
 
         uint256 minToToken = zapper.calcMinToAmountForZapIn(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             fromAsset,
             amount,
-            abi.encode(false)
+            abi.encode(true)
         )
         .mul(998)
         .div(1000);
@@ -183,27 +184,28 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
 
         zapper.zapIn(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             fromAsset,
+            user1,
             amount,
             minToToken,
-            abi.encode(false)
+            abi.encode(true)
         );
     }
 
-    function test_revertWhen_zapLPForWTBT_NoBalance() public {
+    function test_revertWhen_zapLPForDOLA_NoBalance() public {
         /** Arrange */
 
-        address fromAsset = WTBT_USDC_LP;
-        address toAsset = WTBT;
+        address fromAsset = DOLA_USDC_LP;
+        address toAsset = DOLA;
         uint256 amount = 1 ether;
 
         uint256 minToToken = zapper.calcMinToAmountForZapOut(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             toAsset,
             amount,
-            abi.encode(false)
+            abi.encode(true)
         )
         .mul(998)
         .div(1000);
@@ -218,11 +220,11 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
 
         zapper.zapOut(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             amount,
             toAsset,
             minToToken,
-            abi.encode(false)
+            abi.encode(true)
         );
     }
 
@@ -236,22 +238,23 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
 
         minToToken = _zapper.calcMinToAmountForZapIn(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             _fromAsset,
             _amountIn,
-            abi.encode(false)
+            abi.encode(true)
         )
-        .mul(998)
+        .mul(995)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
         _zapper.zapIn(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             _fromAsset,
+            user1,
             _amountIn,
             minToToken,
-            abi.encode(false)
+            abi.encode(true)
         );
     }
 
@@ -263,10 +266,10 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
     ) internal returns (uint256 minToToken){
         minToToken = _zapper.calcMinToAmountForZapOut(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             _toAsset,
             _amountIn,
-            abi.encode(false)
+            abi.encode(true)
         )
         .mul(998)
         .div(1000);
@@ -274,11 +277,11 @@ contract WidoZapperVelodromeV2Test is OptimismForkTest {
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
         _zapper.zapOut(
             IUniswapV2Router02(VELO_V2_ROUTER),
-            IUniswapV2Pair(WTBT_USDC_LP),
+            IUniswapV2Pair(DOLA_USDC_LP),
             _amountIn,
             _toAsset,
             minToToken,
-            abi.encode(false)
+            abi.encode(true)
         );
     }
 }

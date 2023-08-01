@@ -152,6 +152,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             fromAsset,
+            user1,
             amount,
             minToToken,
             bytes("")
@@ -185,6 +186,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             fromAsset,
+            user1,
             amount,
             minToToken,
             bytes("")
@@ -249,6 +251,7 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
             IUniswapV2Router02(CAMELOT_ROUTER),
             IUniswapV2Pair(WETH_ARB_LP),
             _fromAsset,
+            user1,
             _amountIn,
             minToToken,
             bytes("")
