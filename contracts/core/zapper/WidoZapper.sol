@@ -41,6 +41,7 @@ abstract contract WidoZapper {
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
         address fromToken,
+        address recipient,
         uint256 amount,
         uint256 minToToken,
         bytes memory extra
@@ -49,6 +50,15 @@ abstract contract WidoZapper {
 
         uint256 toTokenAmount = _swapAndAddLiquidity(router, pair, fromToken, extra);
         require(toTokenAmount >= minToToken, "Slippage too high");
+
+        uint256 dust = IERC20(pair.token0()).balanceOf(address(this));
+        if (dust > 0) {
+            IERC20(pair.token0()).safeTransfer(recipient, dust);
+        }
+        dust = IERC20(pair.token1()).balanceOf(address(this));
+        if (dust > 0) {
+            IERC20(pair.token1()).safeTransfer(recipient, dust);
+        }
 
         IERC20(address(pair)).safeTransfer(msg.sender, toTokenAmount);
     }

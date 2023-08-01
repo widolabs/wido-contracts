@@ -102,6 +102,7 @@ contract WidoZapperUniswapV3Test is ArbitrumForkTest {
             IUniswapV2Router02(UNI_ROUTER),
             IUniswapV2Pair(ARB_USDs_LP),
             _fromAsset,
+            user1,
             _amountIn,
             minToToken,
             data
