@@ -12,188 +12,14 @@
 
 pragma solidity ^0.8.7;
 
-import "./WidoZapper.sol";
+import "./WidoZapper_ERC20_ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@cryptoalgebra/periphery/contracts/libraries/LiquidityAmounts.sol";
 import "@cryptoalgebra/core/contracts/libraries/TickMath.sol";
 
-interface ISwapRouter02 {
-    struct ExactInputSingleParams {
-        address tokenIn;
-        address tokenOut;
-        uint24 fee;
-        address recipient;
-        uint256 amountIn;
-        uint256 amountOutMinimum;
-        uint160 sqrtPriceLimitX96;
-    }
-
-    /// @notice Swaps `amountIn` of one token for as much as possible of another token
-    /// @dev Setting `amountIn` to 0 will cause the contract to look up its own balance,
-    /// and swap the entire amount, enabling contracts to send tokens before calling this function.
-    /// @param params The parameters necessary for the swap, encoded as `ExactInputSingleParams` in calldata
-    /// @return amountOut The amount of the received token
-    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
-
-}
-
-interface IUniswapV3Pool {
-    function fee() external view returns (uint24);
-    /// @notice The first of the two tokens of the pool, sorted by address
-    /// @return The token contract address
-    function token0() external view returns (address);
-
-    /// @notice The second of the two tokens of the pool, sorted by address
-    /// @return The token contract address
-    function token1() external view returns (address);
-
-    function slot0()
-    external
-    view
-    returns (
-        uint160 sqrtPriceX96,
-        int24 tick,
-        uint16 observationIndex,
-        uint16 observationCardinality,
-        uint16 observationCardinalityNext,
-        uint8 feeProtocol,
-        bool unlocked
-    );
-
-}
-
-interface INonfungiblePositionManager {
-
-    struct MintParams {
-        address token0;
-        address token1;
-        uint24 fee;
-        int24 tickLower;
-        int24 tickUpper;
-        uint256 amount0Desired;
-        uint256 amount1Desired;
-        uint256 amount0Min;
-        uint256 amount1Min;
-        address recipient;
-        uint256 deadline;
-    }
-
-    /// @notice Creates a new position wrapped in a NFT
-    /// @dev Call this when the pool does exist and is initialized. Note that if the pool is created but not initialized
-    /// a method does not exist, i.e. the pool is assumed to be initialized.
-    /// @param params The params necessary to mint a position, encoded as `MintParams` in calldata
-    /// @return tokenId The ID of the token that represents the minted position
-    /// @return liquidity The amount of liquidity for this position
-    /// @return amount0 The amount of token0
-    /// @return amount1 The amount of token1
-    function mint(MintParams calldata params)
-    external
-    payable
-    returns (
-        uint256 tokenId,
-        uint128 liquidity,
-        uint256 amount0,
-        uint256 amount1
-    );
-
-    struct DecreaseLiquidityParams {
-        uint256 tokenId;
-        uint128 liquidity;
-        uint256 amount0Min;
-        uint256 amount1Min;
-        uint256 deadline;
-    }
-
-    /// @notice Decreases the amount of liquidity in a position and accounts it to the position
-    /// @param params tokenId The ID of the token for which liquidity is being decreased,
-    /// amount The amount by which liquidity will be decreased,
-    /// amount0Min The minimum amount of token0 that should be accounted for the burned liquidity,
-    /// amount1Min The minimum amount of token1 that should be accounted for the burned liquidity,
-    /// deadline The time by which the transaction must be included to effect the change
-    /// @return amount0 The amount of token0 accounted to the position's tokens owed
-    /// @return amount1 The amount of token1 accounted to the position's tokens owed
-    function decreaseLiquidity(DecreaseLiquidityParams calldata params)
-    external
-    payable
-    returns (uint256 amount0, uint256 amount1);
-
-    struct CollectParams {
-        uint256 tokenId;
-        address recipient;
-        uint128 amount0Max;
-        uint128 amount1Max;
-    }
-
-    /// @notice Returns the position information associated with a given token ID.
-    /// @dev Throws if the token ID is not valid.
-    /// @param tokenId The ID of the token that represents the position
-    /// @return nonce The nonce for permits
-    /// @return operator The address that is approved for spending
-    /// @return token0 The address of the token0 for a specific pool
-    /// @return token1 The address of the token1 for a specific pool
-    /// @return fee The fee associated with the pool
-    /// @return tickLower The lower end of the tick range for the position
-    /// @return tickUpper The higher end of the tick range for the position
-    /// @return liquidity The liquidity of the position
-    /// @return feeGrowthInside0LastX128 The fee growth of token0 as of the last action on the individual position
-    /// @return feeGrowthInside1LastX128 The fee growth of token1 as of the last action on the individual position
-    /// @return tokensOwed0 The uncollected amount of token0 owed to the position as of the last computation
-    /// @return tokensOwed1 The uncollected amount of token1 owed to the position as of the last computation
-    function positions(uint256 tokenId)
-    external
-    view
-    returns (
-        uint96 nonce,
-        address operator,
-        address token0,
-        address token1,
-        uint24 fee,
-        int24 tickLower,
-        int24 tickUpper,
-        uint128 liquidity,
-        uint256 feeGrowthInside0LastX128,
-        uint256 feeGrowthInside1LastX128,
-        uint128 tokensOwed0,
-        uint128 tokensOwed1
-    );
-    /// @notice Collects up to a maximum amount of fees owed to a specific position to the recipient
-    /// @param params tokenId The ID of the NFT for which tokens are being collected,
-    /// recipient The account that should receive the tokens,
-    /// amount0Max The maximum amount of token0 to collect,
-    /// amount1Max The maximum amount of token1 to collect
-    /// @return amount0 The amount of fees collected in token0
-    /// @return amount1 The amount of fees collected in token1
-    function collect(CollectParams calldata params) external payable returns (uint256 amount0, uint256 amount1);
-
-    /// @notice Burns a token ID, which deletes it from the NFT contract. The token must have 0 liquidity and all tokens
-    /// must be collected first.
-    /// @param tokenId The ID of the token that is being burned
-    function burn(uint256 tokenId) external payable;
-
-    function safeTransferFrom(address from, address to, uint256 tokenId) external;
-}
-
-interface IERC721Receiver {
-    /**
-     * @dev Whenever an {IERC721} `tokenId` token is transferred to this contract via {IERC721-safeTransferFrom}
-     * by `operator` from `from`, this function is called.
-     *
-     * It must return its Solidity selector to confirm the token transfer.
-     * If any other value is returned or the interface is not implemented by the recipient, the transfer will be reverted.
-     *
-     * The selector can be obtained in Solidity with `IERC721Receiver.onERC721Received.selector`.
-     */
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external returns (bytes4);
-}
-
 /// @title Gamma pools Zapper
 /// @notice Add or remove liquidity from Gamma pools using just one of the pool tokens
-contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
+contract WidoZapperUniswapV3 is WidoZapper_ERC20_ERC721 {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for uint160;
     using SafeERC20 for IERC20;
@@ -209,29 +35,19 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
         bytes extra;
     }
 
-    // Implementing `onERC721Received` so this contract can receive custody of erc721 tokens
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC721
     function calcMinToAmountForZapIn(
-        IUniswapV2Router02, //router,
-        IUniswapV2Pair pair,
+        ISwapRouter02, // router
+        IUniswapV3Pool pool,
+        INonfungiblePositionManager, // positionManager
         address fromToken,
         uint256 amount,
         bytes calldata extra
     ) external view virtual override returns (uint256 minToToken) {
-        IUniswapV3Pool pool = IUniswapV3Pool(address(pair));
         bool isZapFromToken0 = pool.token0() == fromToken;
         require(isZapFromToken0 || pool.token1() == fromToken, "Input token not present in liquidity pool");
 
-        (int24 lowerTick,int24 upperTick, ) = abi.decode(extra, (int24, int24, address));
+        (int24 lowerTick,int24 upperTick) = abi.decode(extra, (int24, int24));
 
         (
         uint256 amount0,
@@ -251,15 +67,15 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
         );
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC721
     function calcMinToAmountForZapOut(
-        IUniswapV2Router02, // router,
-        IUniswapV2Pair pair,
+        ISwapRouter02, //router
+        IUniswapV3Pool pool,
+        INonfungiblePositionManager, //positionManager
         address toToken,
         uint256 amount,
         bytes calldata extra
     ) external view virtual override returns (uint256 minToToken) {
-        IUniswapV3Pool pool = IUniswapV3Pool(address(pair));
         bool isZapToToken0 = pool.token0() == toToken;
         require(isZapToToken0 || pool.token1() == toToken, "Output token not present in liquidity pool");
 
@@ -267,7 +83,7 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
         uint160 sqrtRatioBX96;
         (uint160 sqrtPriceX96, , , , , ,) = pool.slot0();
         {
-            (int24 lowerTick,int24 upperTick,) = abi.decode(extra, (int24, int24, address));
+            (int24 lowerTick,int24 upperTick) = abi.decode(extra, (int24, int24));
             sqrtRatioAX96 = TickMath.getSqrtRatioAtTick(lowerTick);
             sqrtRatioBX96 = TickMath.getSqrtRatioAtTick(upperTick);
         }
@@ -287,26 +103,25 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
         }
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC721
     function _swapAndAddLiquidity(
-        IUniswapV2Router02 router,
-        IUniswapV2Pair pair,
+        ISwapRouter02 router,
+        IUniswapV3Pool pool,
+        INonfungiblePositionManager positionManager,
         address fromToken,
         bytes memory extra
-    ) internal override returns (uint256 liquidity) {
-        IUniswapV3Pool pool = IUniswapV3Pool(address(pair));
-        address token0 = pool.token0();
-        address token1 = pool.token1();
-
+    ) internal override returns (uint256 liquidity, uint256 tokenId) {
         uint amount = IERC20(fromToken).balanceOf(address(this));
 
-        bool isZapFromToken0 = token0 == fromToken;
-        require(isZapFromToken0 || token1 == fromToken, "Input token not present in liquidity pool");
-
+        bool isZapFromToken0;
+        {
+            isZapFromToken0 = pool.token0() == fromToken;
+            require(isZapFromToken0 || pool.token1() == fromToken, "Input token not present in liquidity pool");
+        }
         uint256 amount0;
         uint256 amount1;
         {
-            (int24 lowerTick,int24 upperTick,address nonfungiblePositionManager) = abi.decode(extra, (int24, int24, address));
+            (int24 lowerTick,int24 upperTick) = abi.decode(extra, (int24, int24));
             (amount0, amount1,,,,) = _calcZapInAmounts(
                 pool,
                 amount,
@@ -318,62 +133,56 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
 
         if (isZapFromToken0) {
             if (amount - amount0 > 0) {
-                _swap(address(router), pool, amount - amount0, fromToken, token1);
+                _swap(router, pool, amount - amount0, fromToken, pool.token1());
             }
         } else {
             if (amount - amount1 > 0) {
-                _swap(address(router), pool, amount - amount1, fromToken, token0);
+                _swap(router, pool, amount - amount1, fromToken, pool.token0());
             }
         }
 
-        amount0 = IERC20(token0).balanceOf(address(this));
-        amount1 = IERC20(token1).balanceOf(address(this));
+        {
+            amount0 = IERC20(pool.token0()).balanceOf(address(this));
+            amount1 = IERC20(pool.token1()).balanceOf(address(this));
 
+            _approveTokenIfNeeded(pool.token0(), address(positionManager), amount0);
+            _approveTokenIfNeeded(pool.token1(), address(positionManager), amount1);
+        }
 
-        (int24 lowerTick,int24 upperTick,address nonfungiblePositionManager) = abi.decode(extra, (int24, int24, address));
-        _approveTokenIfNeeded(token0, nonfungiblePositionManager, amount0);
-        _approveTokenIfNeeded(token1, nonfungiblePositionManager, amount1);
-
-        INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams({
-            token0 : token0,
-            token1 : token1,
-            fee : pool.fee(),
-            tickLower : lowerTick,
-            tickUpper : upperTick,
-            amount0Desired : amount0,
-            amount1Desired : amount1,
-            amount0Min : 0,
-            amount1Min : 0,
-            recipient : address(this),
-            deadline : block.timestamp
-        });
-
-        uint tokenId;
-        (tokenId, liquidity,,) = INonfungiblePositionManager(nonfungiblePositionManager).mint(params);
-
-        INonfungiblePositionManager(nonfungiblePositionManager).safeTransferFrom(address(this), msg.sender, tokenId);
+        (int24 lowerTick,int24 upperTick) = abi.decode(extra, (int24, int24));
+        (tokenId, liquidity,,) = positionManager.mint(
+            INonfungiblePositionManager.MintParams({
+                token0 : pool.token0(),
+                token1 : pool.token1(),
+                fee : pool.fee(),
+                tickLower : lowerTick,
+                tickUpper : upperTick,
+                amount0Desired : amount0,
+                amount1Desired : amount1,
+                amount0Min : 0,
+                amount1Min : 0,
+                recipient : address(this),
+                deadline : block.timestamp
+            })
+        );
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC721
     function _removeLiquidityAndSwap(
-        IUniswapV2Router02 router,
-        IUniswapV2Pair pair,
+        ISwapRouter02 router,
+        IUniswapV3Pool pool,
+        INonfungiblePositionManager positionManager,
         address toToken,
         bytes memory extra
     ) internal virtual override returns (uint256) {
-        IUniswapV3Pool pool = IUniswapV3Pool(address(pair));
-        (,, INonfungiblePositionManager nonfungiblePositionManager, uint256 tokenId) = abi.decode(extra, (int24, int24, INonfungiblePositionManager, uint256));
-        bool isZapToToken0;
-        {
-            address token0 = pool.token0();
-            address token1 = pool.token1();
-            isZapToToken0 = token0 == toToken;
-            require(isZapToToken0 || token1 == toToken, "Output token not present in liquidity pool");
-        }
+        bool isZapToToken0 = pool.token0() == toToken;
+        require(isZapToToken0 || pool.token1() == toToken, "Output token not present in liquidity pool");
+
+        (,, uint256 tokenId) = abi.decode(extra, (int24, int24, uint256));
+
         INonfungiblePositionManager.DecreaseLiquidityParams memory params;
         {
-
-            (, , , , , , , uint128 liquidity, , , ,) = nonfungiblePositionManager.positions(tokenId);
+            (, , , , , , , uint128 liquidity, , , ,) = positionManager.positions(tokenId);
             params = INonfungiblePositionManager.DecreaseLiquidityParams({
                 tokenId : tokenId,
                 liquidity : liquidity,
@@ -383,10 +192,9 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
             });
         }
 
-        (uint amount0, uint amount1) = nonfungiblePositionManager.decreaseLiquidity(params);
+        (uint amount0, uint amount1) = positionManager.decreaseLiquidity(params);
         {
-
-            nonfungiblePositionManager.collect(
+            positionManager.collect(
                 INonfungiblePositionManager.CollectParams({
                     tokenId : tokenId,
                     recipient : address(this),
@@ -394,16 +202,16 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
                     amount1Max : type(uint128).max
                 })
             );
-            nonfungiblePositionManager.burn(tokenId);
+            positionManager.burn(tokenId);
         }
 
         if (isZapToToken0) {
             if (amount1 > 0) {
-                _swap(address(router), pool, amount1, pool.token1(), toToken);
+                _swap(router, pool, amount1, pool.token1(), toToken);
             }
         } else {
             if (amount0 > 0) {
-                _swap(address(router), pool, amount0, pool.token0(), toToken);
+                _swap(router, pool, amount0, pool.token0(), toToken);
             }
         }
 
@@ -414,7 +222,7 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
 
     /// @dev This function swap amountIn through the path
     function _swap(
-        address router,
+        ISwapRouter02 router,
         IUniswapV3Pool pool,
         uint256 amountIn,
         address tokenIn,
@@ -422,8 +230,8 @@ contract WidoZapperUniswapV3 is WidoZapper, IERC721Receiver {
     )
     internal virtual
     returns (uint256 amountOut) {
-        _approveTokenIfNeeded(tokenIn, router, amountIn);
-        ISwapRouter02(router).exactInputSingle(
+        _approveTokenIfNeeded(tokenIn, address(router), amountIn);
+        router.exactInputSingle(
             ISwapRouter02.ExactInputSingleParams({
                 tokenIn : tokenIn,
                 tokenOut : tokenOut,
