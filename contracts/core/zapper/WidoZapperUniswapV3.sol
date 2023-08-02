@@ -109,10 +109,9 @@ contract WidoZapperUniswapV3 is WidoZapper_ERC20_ERC721 {
         IUniswapV3Pool pool,
         INonfungiblePositionManager positionManager,
         address fromToken,
+        uint256 amount,
         bytes memory extra
     ) internal override returns (uint256 liquidity, uint256 tokenId) {
-        uint amount = IERC20(fromToken).balanceOf(address(this));
-
         bool isZapFromToken0;
         {
             isZapFromToken0 = pool.token0() == fromToken;
@@ -173,12 +172,11 @@ contract WidoZapperUniswapV3 is WidoZapper_ERC20_ERC721 {
         IUniswapV3Pool pool,
         INonfungiblePositionManager positionManager,
         address toToken,
-        bytes memory extra
+        uint256 tokenId,
+        bytes memory //extra
     ) internal virtual override returns (uint256) {
         bool isZapToToken0 = pool.token0() == toToken;
         require(isZapToToken0 || pool.token1() == toToken, "Output token not present in liquidity pool");
-
-        (,, uint256 tokenId) = abi.decode(extra, (int24, int24, uint256));
 
         INonfungiblePositionManager.DecreaseLiquidityParams memory params;
         {

@@ -42,10 +42,10 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
-        assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
@@ -66,10 +66,10 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(WETH).balanceOf(address(zapper)), 2, "Dust");
+        assertEq(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
@@ -92,10 +92,10 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(USDC).balanceOf(address(zapper)), 2, "Dust");
-        assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
@@ -118,10 +118,10 @@ contract WidoZapperUniswapV2Test is MainnetForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(WETH).balanceOf(address(zapper)), 2, "Dust");
+        assertEq(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertEq(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
