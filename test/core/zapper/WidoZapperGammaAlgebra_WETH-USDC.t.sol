@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../shared/PolygonForkTest.sol";
 import "../../../contracts/core/zapper/WidoZapperGammaAlgebra.sol";
 
-contract WidoZapperGamma_WETH_USDC_Test is PolygonForkTest {
+contract WidoZapperGamma_Algebra_WETH_USDC_Test is PolygonForkTest {
     using SafeMath for uint256;
 
     WidoZapperGammaAlgebra zapper;
