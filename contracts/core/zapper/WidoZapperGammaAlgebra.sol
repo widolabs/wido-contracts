@@ -12,7 +12,7 @@
 
 pragma solidity ^0.8.7;
 
-import "./WidoZapper.sol";
+import "./WidoZapper_ERC20_ERC20.sol";
 import "@cryptoalgebra/periphery/contracts/interfaces/ISwapRouter.sol";
 import "@cryptoalgebra/core/contracts/libraries/TickMath.sol";
 import "@cryptoalgebra/periphery/contracts/libraries/LiquidityAmounts.sol";
@@ -62,7 +62,7 @@ interface UniProxy {
 
 /// @title Gamma pools Zapper
 /// @notice Add or remove liquidity from Gamma pools using just one of the pool tokens
-contract WidoZapperGamma is WidoZapper {
+contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
     using LowGasSafeMath for uint256;
     using LowGasSafeMath for uint160;
     using SafeERC20 for IERC20;
@@ -78,7 +78,7 @@ contract WidoZapperGamma is WidoZapper {
         bytes extra;
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC20
     function calcMinToAmountForZapIn(
         IUniswapV2Router02, //router,
         IUniswapV2Pair pair,
@@ -116,7 +116,7 @@ contract WidoZapperGamma is WidoZapper {
         }
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC20
     function calcMinToAmountForZapOut(
         IUniswapV2Router02, // router,
         IUniswapV2Pair pair,
@@ -173,7 +173,7 @@ contract WidoZapperGamma is WidoZapper {
         );
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC20
     function _swapAndAddLiquidity(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -201,7 +201,7 @@ contract WidoZapperGamma is WidoZapper {
         liquidity = liquidity + _liquidateDust(zap);
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC20
     function _removeLiquidityAndSwap(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
