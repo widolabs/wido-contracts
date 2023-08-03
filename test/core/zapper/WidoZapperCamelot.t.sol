@@ -44,9 +44,9 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
         assertLe(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
@@ -67,9 +67,9 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
         assertLe(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
@@ -91,10 +91,10 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalFromBalance = IERC20(fromAsset).balanceOf(user1);
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
-        assertLe(IERC20(GMX).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
         assertLe(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 
@@ -117,9 +117,9 @@ contract WidoZapperCamelotTest is ArbitrumForkTest {
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
 
         assertLe(IERC20(GMX).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 3, "Dust");
+        assertLe(IERC20(USDCe).balanceOf(address(zapper)), 0, "Dust");
 
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
         assertGe(finalToBalance, minToToken, "To balance incorrect");
     }
 

@@ -26,6 +26,8 @@ abstract contract WidoZapper {
 
     error NotEnoughSupply();
 
+    event DustSent(address user, uint256 amount);
+
     struct Asset {
         uint256 reserves;
         address token;
@@ -54,10 +56,12 @@ abstract contract WidoZapper {
         uint256 dust = IERC20(pair.token0()).balanceOf(address(this));
         if (dust > 0) {
             IERC20(pair.token0()).safeTransfer(recipient, dust);
+            emit DustSent(recipient, dust);
         }
         dust = IERC20(pair.token1()).balanceOf(address(this));
         if (dust > 0) {
             IERC20(pair.token1()).safeTransfer(recipient, dust);
+            emit DustSent(recipient, dust);
         }
 
         IERC20(address(pair)).safeTransfer(msg.sender, toTokenAmount);
