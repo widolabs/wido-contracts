@@ -75,7 +75,7 @@ contract WidoZapperUniswapV3_WETH_USDC_Test is MainnetForkTest {
     function test_zapLPForWETH() public {
         /** Arrange */
 
-        _zapIn(zapper, WETH, 1e18);
+        _zapIn(zapper, WETH, 10e18);
 
         address toAsset = WETH;
         uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
@@ -97,6 +97,30 @@ contract WidoZapperUniswapV3_WETH_USDC_Test is MainnetForkTest {
         assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
     }
 
+    function test_zapLPForUSDC() public {
+        /** Arrange */
+
+        _zapIn(zapper, USDC, 100000e6);
+
+        address toAsset = USDC;
+        uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
+        (, , , , , , , uint128 liquidity, , , , ) = INonfungiblePositionManager(UNI_POS_MANAGER).positions(tokenId);
+
+        /** Act */
+
+        uint256 minToToken = _zapOut(zapper, toAsset, tokenId, uint256(liquidity));
+
+        /** Assert */
+
+        vm.expectRevert();
+        INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
+
+        uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
+        assertGe(finalToBalance, minToToken, "To balance incorrect");
+
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+    }
 
     function _zapIn(
         WidoZapperUniswapV3 _zapper,
@@ -111,27 +135,30 @@ contract WidoZapperUniswapV3_WETH_USDC_Test is MainnetForkTest {
 
         bytes memory data = abi.encode(lowerTick, upperTick);
 
-        minToToken = _zapper.calcMinToAmountForZapIn(
-            ISwapRouter02(UNI_ROUTER),
-            IUniswapV3Pool(WETH_USDC_LP),
-            INonfungiblePositionManager(UNI_POS_MANAGER),
-            _fromAsset,
-            _amountIn,
-            data
-        )
+        minToToken = uint256(_zapper.calcMinToAmountForZapIn(
+                IUniswapV3Pool(WETH_USDC_LP),
+                _fromAsset,
+                _amountIn,
+                lowerTick,
+                upperTick
+            ))
         .mul(998)
         .div(1000);
+
+        WidoZapperUniswapV3.ZapInOrder memory zap = WidoZapperUniswapV3.ZapInOrder({
+            pool: IUniswapV3Pool(WETH_USDC_LP),
+            fromToken: _fromAsset,
+            amount: _amountIn,
+            lowerTick: lowerTick,
+            upperTick: upperTick,
+            minToToken: minToToken
+        });
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
         _zapper.zapIn(
             ISwapRouter02(UNI_ROUTER),
-            IUniswapV3Pool(WETH_USDC_LP),
             INonfungiblePositionManager(UNI_POS_MANAGER),
-            _fromAsset,
-            user1,
-            _amountIn,
-            minToToken,
-            data
+            zap
         );
     }
 
@@ -146,27 +173,30 @@ contract WidoZapperUniswapV3_WETH_USDC_Test is MainnetForkTest {
 
         bytes memory data = abi.encode(lowerTick, upperTick);
 
-        minToToken = _zapper.calcMinToAmountForZapOut(
-            ISwapRouter02(UNI_ROUTER),
-            IUniswapV3Pool(WETH_USDC_LP),
-            INonfungiblePositionManager(UNI_POS_MANAGER),
-            _toAsset,
-            _amountIn,
-            data
+        minToToken = uint256(_zapper.calcMinToAmountForZapOut(
+                IUniswapV3Pool(WETH_USDC_LP),
+                _toAsset,
+                uint128(_amountIn),
+                lowerTick,
+                upperTick
+            )
         )
         .mul(998)
         .div(1000);
 
         INonfungiblePositionManager(UNI_POS_MANAGER).approve(address(_zapper), _tokenId);
 
+        WidoZapperUniswapV3.ZapOutOrder memory zap = WidoZapperUniswapV3.ZapOutOrder({
+            pool: IUniswapV3Pool(WETH_USDC_LP),
+            toToken: _toAsset,
+            tokenId: _tokenId,
+            minToToken: minToToken
+        });
+
         _zapper.zapOut(
             ISwapRouter02(UNI_ROUTER),
-            IUniswapV3Pool(WETH_USDC_LP),
             INonfungiblePositionManager(UNI_POS_MANAGER),
-            _tokenId,
-            _toAsset,
-            minToToken,
-            data
+            zap
         );
     }
 }
