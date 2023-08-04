@@ -151,7 +151,8 @@ contract WidoZapperUniswapV3_WETH_USDC_Test is MainnetForkTest {
             amount: _amountIn,
             lowerTick: lowerTick,
             upperTick: upperTick,
-            minToToken: minToToken
+            minToToken: minToToken,
+            recipient: user1
         });
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);

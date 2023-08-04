@@ -33,6 +33,8 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
     using LowGasSafeMath for uint160;
     using SafeERC20 for IERC20;
 
+    event DustSent(address user, uint256 amount);
+
     /// @param fromToken Address of the token to swap
     /// @param amount Amount of the from token to spend on the user's behalf
     /// @param minToToken Minimum amount of the pool token the user is willing to accept
@@ -44,6 +46,7 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
         int24 lowerTick;
         int24 upperTick;
         uint256 minToToken;
+        address recipient;
     }
 
     /// @param fromToken Address of the token to swap
@@ -74,7 +77,6 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
         INonfungiblePositionManager nonfungiblePositionManager,
         ZapInOrder memory order
     ) external {
-        // require(order.pool.factory() == router.factory(), "Incompatible router and pool");
         require(
             order.pool.factory() == nonfungiblePositionManager.factory(),
             "Incompatible nonfungiblePositionManager and pool"
@@ -168,6 +170,17 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
 
         require(liquidity >= order.minToToken, "Slippage too high");
 
+        dustBalance = IERC20(token0).balanceOf(address(this));
+        if (dustBalance > 0) {
+            IERC20(token0).safeTransfer(order.recipient, dustBalance);
+            emit DustSent(order.recipient, dustBalance);
+        }
+        dustBalance = IERC20(token1).balanceOf(address(this));
+        if (dustBalance > 0) {
+            IERC20(token1).safeTransfer(order.recipient, dustBalance);
+            emit DustSent(order.recipient, dustBalance);
+        }
+
         nonfungiblePositionManager.safeTransferFrom(address(this), msg.sender, tokenId);
     }
 
@@ -217,21 +230,21 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
         (, , , , , , , uint128 liquidity, , , , ) = nonfungiblePositionManager.positions(order.tokenId);
         INonfungiblePositionManager.DecreaseLiquidityParams memory params = INonfungiblePositionManager
         .DecreaseLiquidityParams({
-        tokenId: order.tokenId,
-        liquidity: liquidity,
-        amount0Min: 0,
-        amount1Min: 0,
-        deadline: block.timestamp
+            tokenId: order.tokenId,
+            liquidity: liquidity,
+            amount0Min: 0,
+            amount1Min: 0,
+            deadline: block.timestamp
         });
 
         (amount0, amount1) = nonfungiblePositionManager.decreaseLiquidity(params);
         nonfungiblePositionManager.collect(
             INonfungiblePositionManager.CollectParams({
-        tokenId: order.tokenId,
-        recipient: address(this),
-        amount0Max: type(uint128).max,
-        amount1Max: type(uint128).max
-        })
+                tokenId: order.tokenId,
+                recipient: address(this),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            })
         );
         nonfungiblePositionManager.burn(order.tokenId);
     }

@@ -8,14 +8,14 @@ import "../../../contracts/core/zapper/WidoZapperUniswapV3.sol";
 import "../../shared/ArbitrumForkTest.sol";
 import "../../shared/MainnetForkTest.sol";
 
-contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
+contract WidoZapperUniswapV3_SPA_plsSPA_Test is ArbitrumForkTest {
     using SafeMath for uint256;
 
     WidoZapperUniswapV3 zapper;
 
     address constant UNI_ROUTER = address(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
     address constant UNI_POS_MANAGER = address(0xC36442b4a4522E871399CD717aBDD847Ab11FE88);
-    address constant ARB_USDs_LP = address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714);
+    address constant SPA_plsSPA_LP = address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714);
 
     function setUp() public {
         setUpBase();
@@ -25,14 +25,14 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
 
         vm.label(UNI_ROUTER, "UNI_ROUTER");
         vm.label(UNI_POS_MANAGER, "UNI_POS_MANAGER");
-        vm.label(ARB_USDs_LP, "ARB_USDs_LP");
+        vm.label(SPA_plsSPA_LP, "SPA_plsSPA_LP");
     }
 
-    function test_zapARBForLP() public {
+    function test_zapSPAForLP() public {
         /** Arrange */
 
         uint256 amount = 50e18;
-        address fromAsset = ARB;
+        address fromAsset = SPA;
 
         /** Act */
 
@@ -46,15 +46,15 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
         uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
         assertNotEq(tokenId, 0, "To balance incorrect");
 
-        assertLe(IERC20(USDs).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(ARB).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(plsSPA).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(SPA).balanceOf(address(zapper)), 0, "Dust");
     }
 
-    function test_zapUSDsForLP() public {
+    function test_zapplsSPAForLP() public {
         /** Arrange */
 
         uint256 amount = 50e18;
-        address fromAsset = USDs;
+        address fromAsset = plsSPA;
 
         /** Act */
 
@@ -68,16 +68,16 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
         uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
         assertNotEq(tokenId, 0, "To balance incorrect");
 
-        assertLe(IERC20(USDs).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(ARB).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(plsSPA).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(SPA).balanceOf(address(zapper)), 0, "Dust");
     }
 
-    function test_zapLPForARB() public {
+    function test_zapLPForSPA() public {
         /** Arrange */
 
-        _zapIn(zapper, ARB, 1e18);
+        _zapIn(zapper, SPA, 1e18);
 
-        address toAsset = ARB;
+        address toAsset = SPA;
         uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
         (, , , , , , , uint128 liquidity, , , , ) = INonfungiblePositionManager(UNI_POS_MANAGER).positions(tokenId);
 
@@ -93,16 +93,16 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
         assertGe(finalToBalance, minToToken, "To balance incorrect");
 
-        assertLe(IERC20(USDs).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(ARB).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(plsSPA).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(SPA).balanceOf(address(zapper)), 0, "Dust");
     }
 
-    function test_zapLPForUSDs() public {
+    function test_zapLPForplsSPA() public {
         /** Arrange */
 
-        _zapIn(zapper, USDs, 10e6);
+        _zapIn(zapper, plsSPA, 10e6);
 
-        address toAsset = USDs;
+        address toAsset = plsSPA;
         uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
         (, , , , , , , uint128 liquidity, , , , ) = INonfungiblePositionManager(UNI_POS_MANAGER).positions(tokenId);
 
@@ -118,8 +118,8 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
         uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
         assertGe(finalToBalance, minToToken, "To balance incorrect");
 
-        assertLe(IERC20(USDs).balanceOf(address(zapper)), 0, "Dust");
-        assertLe(IERC20(ARB).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(plsSPA).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(SPA).balanceOf(address(zapper)), 0, "Dust");
     }
 
     function _zapIn(
@@ -136,7 +136,7 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
         bytes memory data = abi.encode(lowerTick, upperTick);
 
         minToToken = uint256(_zapper.calcMinToAmountForZapIn(
-            IUniswapV3Pool(ARB_USDs_LP),
+            IUniswapV3Pool(SPA_plsSPA_LP),
             _fromAsset,
             _amountIn,
             lowerTick,
@@ -146,12 +146,13 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
         .div(1000);
 
         WidoZapperUniswapV3.ZapInOrder memory zap = WidoZapperUniswapV3.ZapInOrder({
-            pool: IUniswapV3Pool(ARB_USDs_LP),
+            pool: IUniswapV3Pool(SPA_plsSPA_LP),
             fromToken: _fromAsset,
             amount: _amountIn,
             lowerTick: lowerTick,
             upperTick: upperTick,
-            minToToken: minToToken
+            minToToken: minToToken,
+            recipient: user1
         });
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
@@ -174,7 +175,7 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
         bytes memory data = abi.encode(lowerTick, upperTick);
 
         minToToken = uint256(_zapper.calcMinToAmountForZapOut(
-            IUniswapV3Pool(ARB_USDs_LP),
+            IUniswapV3Pool(SPA_plsSPA_LP),
             _toAsset,
             uint128(_amountIn),
             lowerTick,
@@ -186,7 +187,7 @@ contract WidoZapperUniswapV3_ARB_USDs_Test is ArbitrumForkTest {
         INonfungiblePositionManager(UNI_POS_MANAGER).approve(address(_zapper), _tokenId);
 
         WidoZapperUniswapV3.ZapOutOrder memory zap = WidoZapperUniswapV3.ZapOutOrder({
-            pool: IUniswapV3Pool(ARB_USDs_LP),
+            pool: IUniswapV3Pool(SPA_plsSPA_LP),
             toToken: _toAsset,
             tokenId: _tokenId,
             minToToken: minToToken
