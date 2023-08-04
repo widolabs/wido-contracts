@@ -112,5 +112,9 @@ interface INonfungiblePositionManager {
 
     function safeTransferFrom(address from, address to, uint256 tokenId) external;
 
+    function approve(address to, uint256 tokenId) external;
+
     function tokenOfOwnerByIndex(address owner, uint256 index) external returns(uint256);
+
+    function factory() external view returns (address);
 }

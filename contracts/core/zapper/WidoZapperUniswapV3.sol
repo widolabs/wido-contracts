@@ -175,47 +175,48 @@ contract WidoZapperUniswapV3 is WidoZapper_ERC20_ERC721 {
         uint256 tokenId,
         bytes memory //extra
     ) internal virtual override returns (uint256) {
+        require(
+            pool.factory() == positionManager.factory(),
+            "Incompatible positionManager and pool"
+        );
+
         bool isZapToToken0 = pool.token0() == toToken;
         require(isZapToToken0 || pool.token1() == toToken, "Output token not present in liquidity pool");
 
-        INonfungiblePositionManager.DecreaseLiquidityParams memory params;
-        {
-            (, , , , , , , uint128 liquidity, , , ,) = positionManager.positions(tokenId);
-            params = INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId : tokenId,
-                liquidity : liquidity,
-                amount0Min : 0,
-                amount1Min : 0,
-                deadline : block.timestamp
-            });
-        }
+        (, , , , , , , uint128 liquidity, , , , ) = positionManager.positions(tokenId);
 
-        (uint amount0, uint amount1) = positionManager.decreaseLiquidity(params);
-        {
-            positionManager.collect(
-                INonfungiblePositionManager.CollectParams({
-                    tokenId : tokenId,
-                    recipient : address(this),
-                    amount0Max : type(uint128).max,
-                    amount1Max : type(uint128).max
-                })
-            );
-            positionManager.burn(tokenId);
-        }
+        (uint256 amount0, uint256 amount1) = positionManager.decreaseLiquidity(
+            INonfungiblePositionManager.DecreaseLiquidityParams({
+                tokenId: tokenId,
+                liquidity: liquidity,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp
+            })
+        );
+
+        positionManager.collect(
+            INonfungiblePositionManager.CollectParams({
+                tokenId: tokenId,
+                recipient: address(this),
+                amount0Max: type(uint128).max,
+                amount1Max: type(uint128).max
+            })
+        );
+
+        positionManager.burn(tokenId);
 
         if (isZapToToken0) {
             if (amount1 > 0) {
-                _swap(router, pool, amount1, pool.token1(), toToken);
+                _swap(router, pool, amount1, toToken, pool.token1());
             }
         } else {
             if (amount0 > 0) {
-                _swap(router, pool, amount0, pool.token0(), toToken);
+                _swap(router, pool, amount0, toToken, pool.token0());
             }
         }
 
-        uint256 toTokenAmount = IERC20(toToken).balanceOf(address(this));
-
-        return toTokenAmount;
+        return IERC20(toToken).balanceOf(address(this));
     }
 
     /// @dev This function swap amountIn through the path
@@ -226,8 +227,7 @@ contract WidoZapperUniswapV3 is WidoZapper_ERC20_ERC721 {
         address tokenIn,
         address tokenOut
     )
-    internal virtual
-    returns (uint256 amountOut) {
+    internal virtual {
         _approveTokenIfNeeded(tokenIn, address(router), amountIn);
         router.exactInputSingle(
             ISwapRouter02.ExactInputSingleParams({

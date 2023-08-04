@@ -84,7 +84,7 @@ abstract contract WidoZapper_ERC20_ERC721 is IERC721Receiver {
         uint256 minToToken,
         bytes memory extra
     ) external {
-        // transfer tokenId
+        positionManager.safeTransferFrom(msg.sender, address(this), tokenId);
 
         uint256 toTokenAmount = _removeLiquidityAndSwap(router, pool, positionManager, toToken, tokenId, extra);
         require(toTokenAmount >= minToToken, "Slippage too high");
@@ -137,8 +137,8 @@ abstract contract WidoZapper_ERC20_ERC721 is IERC721Receiver {
         ISwapRouter02 router,
         IUniswapV3Pool pool,
         INonfungiblePositionManager positionManager,
-        address tokenA,
-        uint256 amount,
+        address fromToken,
+        uint256 amountIn,
         bytes memory extra
     ) internal virtual returns (uint256 addedLiquidity, uint256 tokenId);
 

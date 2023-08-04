@@ -72,6 +72,56 @@ contract WidoZapperUniswapV3Test is MainnetForkTest {
         assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
     }
 
+    function test_zapLPForWETH() public {
+        /** Arrange */
+
+        _zapIn(zapper, WETH, 1e18);
+
+        address toAsset = WETH;
+        uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
+        (, , , , , , , uint128 liquidity, , , , ) = INonfungiblePositionManager(UNI_POS_MANAGER).positions(tokenId);
+
+        /** Act */
+
+        uint256 minToToken = _zapOut(zapper, toAsset, tokenId, uint256(liquidity));
+
+        /** Assert */
+
+        vm.expectRevert();
+        INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
+
+        uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
+        assertGe(finalToBalance, minToToken, "To balance incorrect");
+
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+    }
+
+    function test_zapLPForUSDC() public {
+        /** Arrange */
+
+        _zapIn(zapper, USDC, 10e6);
+
+        address toAsset = USDC;
+        uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
+        (, , , , , , , uint128 liquidity, , , , ) = INonfungiblePositionManager(UNI_POS_MANAGER).positions(tokenId);
+
+        /** Act */
+
+        uint256 minToToken = _zapOut(zapper, toAsset, tokenId, uint256(liquidity));
+
+        /** Assert */
+
+        vm.expectRevert();
+        INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
+
+        uint256 finalToBalance = IERC20(toAsset).balanceOf(user1);
+        assertGe(finalToBalance, minToToken, "To balance incorrect");
+
+        assertLe(IERC20(USDC).balanceOf(address(zapper)), 0, "Dust");
+        assertLe(IERC20(WETH).balanceOf(address(zapper)), 0, "Dust");
+    }
+
     function _zapIn(
         WidoZapperUniswapV3 _zapper,
         address _fromAsset,
@@ -104,6 +154,41 @@ contract WidoZapperUniswapV3Test is MainnetForkTest {
             _fromAsset,
             user1,
             _amountIn,
+            minToToken,
+            data
+        );
+    }
+
+    function _zapOut(
+        WidoZapperUniswapV3 _zapper,
+        address _toAsset,
+        uint256 _tokenId,
+        uint256 _amountIn
+    ) internal returns (uint256 minToToken){
+        int24 lowerTick = 1000;
+        int24 upperTick = 1200;
+
+        bytes memory data = abi.encode(lowerTick, upperTick);
+
+        minToToken = _zapper.calcMinToAmountForZapOut(
+            ISwapRouter02(UNI_ROUTER),
+            IUniswapV3Pool(WETH_USDC_LP),
+            INonfungiblePositionManager(UNI_POS_MANAGER),
+            _toAsset,
+            _amountIn,
+            data
+        )
+        .mul(998)
+        .div(1000);
+
+        INonfungiblePositionManager(UNI_POS_MANAGER).approve(address(_zapper), _tokenId);
+
+        _zapper.zapOut(
+            ISwapRouter02(UNI_ROUTER),
+            IUniswapV3Pool(WETH_USDC_LP),
+            INonfungiblePositionManager(UNI_POS_MANAGER),
+            _tokenId,
+            _toAsset,
             minToToken,
             data
         );

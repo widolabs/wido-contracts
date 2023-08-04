@@ -12,6 +12,8 @@ interface IUniswapV3Pool {
     /// @return The token contract address
     function token1() external view returns (address);
 
+    function factory() external view returns (address);
+
     function slot0()
     external
     view
