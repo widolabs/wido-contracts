@@ -20,7 +20,7 @@ import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol";
 
 /// @notice Add or remove liquidity from Uniswap V2-like pools using just one of the pool tokens
-abstract contract WidoZapper {
+abstract contract WidoZapper_ERC20_ERC20 {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 

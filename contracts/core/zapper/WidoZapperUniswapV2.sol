@@ -12,17 +12,17 @@
 
 pragma solidity 0.8.7;
 
-import "./WidoZapper.sol";
+import "./WidoZapper_ERC20_ERC20.sol";
 
 /// @title UniswapV2 pools Zapper
 /// @notice Add or remove liquidity from Uniswap V2 pools using just one of the pool tokens
-contract WidoZapperUniswapV2 is WidoZapper {
+contract WidoZapperUniswapV2 is WidoZapper_ERC20_ERC20 {
     using LowGasSafeMath for uint256;
     using SafeERC20 for IERC20;
 
     uint256 internal constant FEE_DENOMINATOR = 10_000;
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC20
     function calcMinToAmountForZapIn(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -62,7 +62,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
         return Math.min(amount0.mul(lpTotalSupply) / reserve0, amount1.mul(lpTotalSupply) / reserve1);
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC20
     function calcMinToAmountForZapOut(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -113,7 +113,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
         return amount0 + amount1;
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC20
     function _swapAndAddLiquidity(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
@@ -148,7 +148,7 @@ contract WidoZapperUniswapV2 is WidoZapper {
         return poolTokenAmount;
     }
 
-    /// @inheritdoc WidoZapper
+    /// @inheritdoc WidoZapper_ERC20_ERC20
     function _removeLiquidityAndSwap(
         IUniswapV2Router02 router,
         IUniswapV2Pair pair,
