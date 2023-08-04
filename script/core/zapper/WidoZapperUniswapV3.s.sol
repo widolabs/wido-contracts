@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
 
 import "forge-std/Script.sol";
 import "../../../contracts/core/zapper/WidoZapperUniswapV3.sol";

@@ -58,6 +58,7 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
         address toToken;
         uint256 minToToken;
         uint256 tokenId;
+        address recipient;
     }
 
     // Implementing `onERC721Received` so this contract can receive custody of erc721 tokens
@@ -181,7 +182,7 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
             emit DustSent(order.recipient, dustBalance);
         }
 
-        nonfungiblePositionManager.safeTransferFrom(address(this), msg.sender, tokenId);
+        nonfungiblePositionManager.safeTransferFrom(address(this), order.recipient, tokenId);
     }
 
     /// @notice Remove liquidity from an Uniswap V3 pool into one of the pool tokens
@@ -220,7 +221,7 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
 
         require(toTokenAmount >= order.minToToken, "Slippage too high");
 
-        IERC20(order.toToken).safeTransfer(msg.sender, toTokenAmount);
+        IERC20(order.toToken).safeTransfer(order.recipient, toTokenAmount);
     }
 
     function _removeLiquidity(INonfungiblePositionManager nonfungiblePositionManager, ZapOutOrder memory order)

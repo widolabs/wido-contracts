@@ -190,7 +190,8 @@ contract WidoZapperUniswapV3_SPA_plsSPA_Test is ArbitrumForkTest {
             pool: IUniswapV3Pool(SPA_plsSPA_LP),
             toToken: _toAsset,
             tokenId: _tokenId,
-            minToToken: minToToken
+            minToToken: minToToken,
+            recipient: user1
         });
 
 

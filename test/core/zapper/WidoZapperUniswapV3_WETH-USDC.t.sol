@@ -191,7 +191,8 @@ contract WidoZapperUniswapV3_WETH_USDC_Test is MainnetForkTest {
             pool: IUniswapV3Pool(WETH_USDC_LP),
             toToken: _toAsset,
             tokenId: _tokenId,
-            minToToken: minToToken
+            minToToken: minToToken,
+            recipient: user1
         });
 
         _zapper.zapOut(
