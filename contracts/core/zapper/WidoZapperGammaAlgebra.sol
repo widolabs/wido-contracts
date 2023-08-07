@@ -269,6 +269,10 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             if (balanceOut < amount1) {
                 amount1 = balanceOut;
                 amount0 = _getPairAmount(zap.pool, zap.token1, amount1);
+                balanceOut = IERC20(zap.token0).balanceOf(address(this));
+                if (balanceOut < amount0) {
+                    amount0 = balanceOut;
+                }
             }
         }
         else {
@@ -282,6 +286,10 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             if (balanceOut < amount0) {
                 amount0 = balanceOut;
                 amount1 = _getPairAmount(zap.pool, zap.token0, amount0);
+                balanceOut = IERC20(zap.token1).balanceOf(address(this));
+                if (balanceOut < amount1) {
+                    amount1 = balanceOut;
+                }
             }
         }
 
