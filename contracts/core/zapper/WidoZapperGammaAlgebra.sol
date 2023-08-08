@@ -94,27 +94,20 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
     ) external view virtual override returns (uint256 minToToken) {
         Hypervisor hyper = Hypervisor(address(pair));
         IAlgebraPool pool = IAlgebraPool(Hypervisor(address(pair)).pool());
-        Ratios memory ratios;
-
-        // a struct for the ratios because stack too deep
-        {
-            (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
-            ratios = Ratios({
-                X96 : sqrtPriceX96,
-                AX96 : TickMath.getSqrtRatioAtTick(hyper.baseLower()),
-                BX96 : TickMath.getSqrtRatioAtTick(hyper.baseUpper())
-            });
-        }
+        uint256 amount0;
+        uint256 amount1;
 
         // we need the balanced amounts to compute the shares
-        (uint256 amount0, uint256 amount1) = _balancedAmounts(
-            address(pair),
-            ratios,
-            amount,
-            pair.token0() == fromToken
-        );
-
-        // Following is how Gamma computes the `shares` when you deposit
+        {
+            (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
+            (amount0, amount1) = _balancedAmounts(
+                address(pair),
+                sqrtPriceX96,
+                amount,
+                pair.token0() == fromToken
+            );
+        }
+        // Following is how Gamma computes the `shares` when you deposit.
         // shares is what we call liquidity here.
         // What they internally call liquidity is the amount of liquidity added on each tick
         //  but those two added don't equal to the shares
@@ -251,22 +244,10 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
     /// @notice Re-balances `amount` of the input token, and deposits into the pool
     /// @return liquidity Amount of added liquidity into the vault
     function _deposit(Zap memory zap) private returns (uint256 liquidity) {
-        Hypervisor hyper = Hypervisor(zap.pool);
-
-
-        Ratios memory ratios = Ratios({
-            X96 : zap.sqrtPriceX96,
-            AX96 : TickMath.getSqrtRatioAtTick(hyper.baseLower()),
-            BX96 : TickMath.getSqrtRatioAtTick(hyper.baseUpper())
-        });
-
-        // getting the amounts ONLY using base range
-        // When using quoting both, if both values are summed, the resulting amounts
-        //  surpass the total value of what the user inputs
 
         (uint256 amount0, uint256 amount1) = _balancedAmounts(
             zap.pool,
-            ratios,
+            zap.sqrtPriceX96,
             zap.amount,
             zap.fromToken0
         );
@@ -279,48 +260,13 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         - With `getDepositAmount` from `UniProxy` we can get the `amount of token to deposit for the given amount of pair token`
             - I understand that means `amount0 given amount1`
         - If that is the case we can use that function to get the ratio and balance amounts
-
-/*
-        IAlgebraPool pool = IAlgebraPool(hyper.pool());
-        (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
-
-        ratios = Ratios({
-            X96 : sqrtPriceX96,
-            AX96 : TickMath.getSqrtRatioAtTick(hyper.limitLower()),
-            BX96 : TickMath.getSqrtRatioAtTick(hyper.limitUpper())
-        });
-
-        {
-            (uint256 amount0Aux, uint256 amount1Aux) = _balancedAmounts(
-                zap.pool,
-                ratios,
-                zap.amount,
-                zap.fromToken0
-            );
-            console2.log(amount0);
-            console2.log(amount1);
-
-            console2.log(amount0Aux);
-            console2.log(amount1Aux);
-
-            amount0 += amount0Aux;
-            amount1 += amount1Aux;
-        }
-
 */
-        console2.log(zap.amount);
-
-
-        console2.log(amount0);
-        console2.log(amount1);
-        console2.log("SSS");
 
         // now we know how much of each token we need, so we can sell the difference
-        //  on what we have.
-        // The swap is not always going to be exact, so afterwards we check how much
-        //  token we received, and from that compute the pair amount in ratio.
+        //
+        // The swap is not always going to be exact, so afterwards we check how much token we received,
+        // and from that compute the amounts in the correct ratio.
 
-        // swap excess amount of input token for the pair token
         uint256 balanceOut;
 
         if (zap.fromToken0) {
@@ -333,8 +279,13 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             // we are still relaying on this to get an accepted ratio
             // without this we get constant `Improper ratio`
             balanceOut = IERC20(zap.token1).balanceOf(address(this));
+            // if we have less balance than we say, we need to fix the amounts
             if (balanceOut < amount1) {
+                // set balance into amount
                 amount1 = balanceOut;
+                // compute correct ratio,
+                // since we know we input less amount,
+                // any amount this function returns should be bigger than our balance
                 amount0 = _getPairAmount(zap.pool, zap.token1, amount1);
             }
             //
@@ -374,31 +325,6 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             zap.pool,
             inMin
         );
-    }
-
-    /// @dev This will iterate and deposit remaining amount of any token
-    function _liquidateDust(Zap memory zap) internal returns (uint256 liquidity) {
-        // check token0 dust
-        uint8 _decimals = IERC20Metadata(zap.token0).decimals();
-        zap.amount = IERC20(zap.token0).balanceOf(address(this));
-        zap.fromToken0 = true;
-        if (zap.amount > 10 ** (_decimals / 2)) {
-            // re-balance and deposit
-            liquidity = liquidity + _deposit(zap);
-            // check remaining dust
-            zap.amount = IERC20(zap.token0).balanceOf(address(this));
-        }
-
-        // check token1 dust
-        _decimals = IERC20Metadata(zap.token0).decimals();
-        zap.amount = IERC20(zap.token1).balanceOf(address(this));
-        zap.fromToken0 = false;
-        if (zap.amount > 10 ** (_decimals / 2)) {
-            // re-balance and deposit
-            liquidity = liquidity + _deposit(zap);
-            // check remaining dust
-            zap.amount = IERC20(zap.token1).balanceOf(address(this));
-        }
     }
 
     /// @dev This function swap amountIn through the path
@@ -441,8 +367,8 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
 
     /// @notice Computes `amount0` and `amount1` that equal to the `amount` of the given token
     function _balancedAmounts(
-        address pair,
-        Ratios memory ratios,
+        address pool,
+        uint160 sqrtPriceX96,
         uint256 amount,
         bool isZapFromToken0
     )
@@ -451,9 +377,19 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         uint256 amount0,
         uint256 amount1
     ) {
-        uint256 token0Price = FullMath.mulDiv(ratios.X96.mul(1e18), ratios.X96, 2 ** 192);
+        // get sample pair of amounts with correct ratio
+        if (isZapFromToken0) {
+            amount0 = 1e18;
+            amount1 = _getPairAmount(pool, Hypervisor(pool).token0(), amount0);
+        }
+        else {
+            amount1 = 1e18;
+            amount0 = _getPairAmount(pool, Hypervisor(pool).token1(), amount1);
+        }
 
-        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(ratios.X96, ratios.AX96, ratios.BX96, 1e18);
+        // compute optimal ratio
+
+        uint256 token0Price = FullMath.mulDiv(uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)), 1e18, 2 ** (96 * 2));
 
         uint256 optimalRatio;
         if (amount0 == 0) {
@@ -461,6 +397,9 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         } else {
             optimalRatio = (amount1 * 1e18) / amount0;
         }
+
+        // compute `amount0` and `amount1` with correct ratio,
+        //   that equal to `amount` in value,
 
         if (isZapFromToken0) {
             amount0 = (amount * token0Price) / (optimalRatio + token0Price);

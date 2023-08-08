@@ -277,7 +277,7 @@ contract WidoZapperGamma_Algebra_WMATIC_QUICK_Test is PolygonForkTest {
             _amountIn,
             data
         )
-        .mul(998)
+        .mul(995)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
