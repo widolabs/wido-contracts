@@ -78,6 +78,12 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         bytes extra;
     }
 
+    struct Ratios {
+        uint160 X96;
+        uint160 AX96;
+        uint160 BX96;
+    }
+
     /// @inheritdoc WidoZapper_ERC20_ERC20
     function calcMinToAmountForZapIn(
         IUniswapV2Router02, //router,
@@ -87,33 +93,59 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         bytes calldata //extra
     ) external view virtual override returns (uint256 minToToken) {
         Hypervisor hyper = Hypervisor(address(pair));
+        IAlgebraPool pool = IAlgebraPool(Hypervisor(address(pair)).pool());
+        Ratios memory ratios;
 
-        if (hyper.token0() == fromToken) {
-            minToToken = LiquidityAmounts.getLiquidityForAmount0(
-                TickMath.getSqrtRatioAtTick(hyper.baseLower()),
-                TickMath.getSqrtRatioAtTick(hyper.baseUpper()),
-                amount
-            );
-
-            minToToken = minToToken + LiquidityAmounts.getLiquidityForAmount0(
-                TickMath.getSqrtRatioAtTick(hyper.limitLower()),
-                TickMath.getSqrtRatioAtTick(hyper.limitUpper()),
-                amount
-            );
+        {
+            (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
+            ratios = Ratios({
+                X96 : sqrtPriceX96,
+                AX96 : TickMath.getSqrtRatioAtTick(hyper.baseLower()),
+                BX96 : TickMath.getSqrtRatioAtTick(hyper.baseUpper())
+            });
         }
-        else {
-            minToToken = LiquidityAmounts.getLiquidityForAmount1(
-                TickMath.getSqrtRatioAtTick(hyper.baseLower()),
-                TickMath.getSqrtRatioAtTick(hyper.baseUpper()),
-                amount
-            );
 
-            minToToken = minToToken + LiquidityAmounts.getLiquidityForAmount1(
-                TickMath.getSqrtRatioAtTick(hyper.limitLower()),
-                TickMath.getSqrtRatioAtTick(hyper.limitUpper()),
-                amount
-            );
-        }
+        (uint256 amount0, uint256 amount1) = _balancedAmounts(
+            address(pair),
+            ratios,
+            amount,
+            pair.token0() == fromToken
+        );
+
+
+        (uint256 pool0, uint256 pool1) = hyper.getTotalAmounts();
+        uint256 total = hyper.totalSupply();
+
+        uint160 sqrtPrice = TickMath.getSqrtRatioAtTick(hyper.currentTick());
+        uint256 price = FullMath.mulDiv(uint256(sqrtPrice).mul(uint256(sqrtPrice)), 1e36, 2**(96 * 2));
+
+        uint256 shares = amount1.add(amount0.mul(price) / 1e36);
+
+        uint256 pool0PricedInToken1 = pool0.mul(price) / 1e36;
+        minToToken = shares.mul(total) / pool0PricedInToken1.add(pool1);
+
+        /*
+        ratios = Ratios({
+            X96 : ratios.X96,
+            AX96 : TickMath.getSqrtRatioAtTick(hyper.limitLower()),
+            BX96 : TickMath.getSqrtRatioAtTick(hyper.limitUpper())
+        });
+
+        (amount0, amount1) = _balancedAmounts(
+            address(pair),
+            ratios,
+            amount,
+            pair.token0() == fromToken
+        );
+
+        minToToken = minToToken + LiquidityAmounts.getLiquidityForAmounts(
+            ratios.X96,
+            ratios.AX96,
+            ratios.BX96,
+            amount0,
+            amount1
+        );
+        */
     }
 
     /// @inheritdoc WidoZapper_ERC20_ERC20
@@ -197,8 +229,6 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         );
 
         liquidity = _deposit(zap);
-
-        liquidity = liquidity + _liquidateDust(zap);
     }
 
     /// @inheritdoc WidoZapper_ERC20_ERC20
@@ -242,13 +272,57 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         // first we compute the ideal token balances that we should try to deposit,
         //  given the value of our input assets
 
+        Hypervisor hyper = Hypervisor(zap.pool);
+
+        Ratios memory ratios = Ratios({
+            X96 : zap.sqrtPriceX96,
+            AX96 : TickMath.getSqrtRatioAtTick(hyper.baseLower()),
+            BX96 : TickMath.getSqrtRatioAtTick(hyper.baseUpper())
+        });
+
         // obtain `amount0` and `amount1` that equal to `amount` of the given token
         (uint256 amount0, uint256 amount1) = _balancedAmounts(
             zap.pool,
-            zap.sqrtPriceX96,
+            ratios,
             zap.amount,
             zap.fromToken0
         );
+
+/*
+        IAlgebraPool pool = IAlgebraPool(hyper.pool());
+        (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
+
+        ratios = Ratios({
+            X96 : sqrtPriceX96,
+            AX96 : TickMath.getSqrtRatioAtTick(hyper.limitLower()),
+            BX96 : TickMath.getSqrtRatioAtTick(hyper.limitUpper())
+        });
+
+        {
+            (uint256 amount0Aux, uint256 amount1Aux) = _balancedAmounts(
+                zap.pool,
+                ratios,
+                zap.amount,
+                zap.fromToken0
+            );
+            console2.log(amount0);
+            console2.log(amount1);
+
+            console2.log(amount0Aux);
+            console2.log(amount1Aux);
+
+            amount0 += amount0Aux;
+            amount1 += amount1Aux;
+        }
+
+*/
+        console2.log(zap.amount);
+
+
+        console2.log(amount0);
+        console2.log(amount1);
+        console2.log("SSS");
+        // swapExactOutput amount1, until we have enough amount0
 
         // now we know how much of each token we need, so we can sell the difference
         //  on what we have.
@@ -268,11 +342,6 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             balanceOut = IERC20(zap.token1).balanceOf(address(this));
             if (balanceOut < amount1) {
                 amount1 = balanceOut;
-                amount0 = _getPairAmount(zap.pool, zap.token1, amount1);
-                balanceOut = IERC20(zap.token0).balanceOf(address(this));
-                if (balanceOut < amount0) {
-                    amount0 = balanceOut;
-                }
             }
         }
         else {
@@ -285,11 +354,6 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             balanceOut = IERC20(zap.token0).balanceOf(address(this));
             if (balanceOut < amount0) {
                 amount0 = balanceOut;
-                amount1 = _getPairAmount(zap.pool, zap.token0, amount0);
-                balanceOut = IERC20(zap.token1).balanceOf(address(this));
-                if (balanceOut < amount1) {
-                    amount1 = balanceOut;
-                }
             }
         }
 
@@ -297,6 +361,9 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         //  so we'll have to run this function more than once
 
         // deposit liquidity into the pool
+
+        //amount0 = IERC20(zap.token0).balanceOf(address(this));
+        //amount1 = IERC20(zap.token1).balanceOf(address(this));
 
         _approveTokenIfNeeded(zap.token0, zap.pool, amount0);
         _approveTokenIfNeeded(zap.token1, zap.pool, amount1);
@@ -378,8 +445,8 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
 
     /// @notice Computes `amount0` and `amount1` that equal to the `amount` of the given token
     function _balancedAmounts(
-        address pool,
-        uint160 sqrtPriceX96,
+        address pair,
+        Ratios memory ratios,
         uint256 amount,
         bool isZapFromToken0
     )
@@ -388,16 +455,9 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         uint256 amount0,
         uint256 amount1
     ) {
-        if (isZapFromToken0) {
-            amount0 = amount;
-            amount1 = _getPairAmount(pool, Hypervisor(pool).token0(), amount);
-        }
-        else {
-            amount1 = amount;
-            amount0 = _getPairAmount(pool, Hypervisor(pool).token1(), amount);
-        }
+        uint256 token0Price = FullMath.mulDiv(ratios.X96.mul(1e18), ratios.X96, 2 ** 192);
 
-        uint256 token0Price = FullMath.mulDiv(uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)), 1e18, 2 ** (96 * 2));
+        (amount0, amount1) = LiquidityAmounts.getAmountsForLiquidity(ratios.X96, ratios.AX96, ratios.BX96, 1e18);
 
         uint256 optimalRatio;
         if (amount0 == 0) {

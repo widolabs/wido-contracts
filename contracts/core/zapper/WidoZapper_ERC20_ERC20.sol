@@ -18,6 +18,7 @@ import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v3-core/contracts/libraries/LowGasSafeMath.sol";
+import "forge-std/Test.sol";
 
 /// @notice Add or remove liquidity from Uniswap V2-like pools using just one of the pool tokens
 abstract contract WidoZapper_ERC20_ERC20 {
@@ -51,6 +52,8 @@ abstract contract WidoZapper_ERC20_ERC20 {
         IERC20(fromToken).safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 toTokenAmount = _swapAndAddLiquidity(router, pair, fromToken, extra);
+        console2.log(toTokenAmount);
+        console2.log(minToToken);
         require(toTokenAmount >= minToToken, "Slippage too high");
 
         uint256 dust = IERC20(pair.token0()).balanceOf(address(this));
