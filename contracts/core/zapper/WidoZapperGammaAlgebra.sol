@@ -78,12 +78,6 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         bytes extra;
     }
 
-    struct Ratios {
-        uint160 X96;
-        uint160 AX96;
-        uint160 BX96;
-    }
-
     /// @inheritdoc WidoZapper_ERC20_ERC20
     function calcMinToAmountForZapIn(
         IUniswapV2Router02, //router,
@@ -220,12 +214,16 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         uint256[4] memory inMin;
         uint256 amount = IERC20(address(pair)).balanceOf(address(this));
 
+        // withdraw assets from vault
+
         Hypervisor(address(pair)).withdraw(
             amount,
             address(this),
             address(this),
             inMin
         );
+
+        // swap one side for the other
 
         address fromToken = token1 == toToken
         ? token0
@@ -308,9 +306,6 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         }
 
         // deposit liquidity into the pool
-
-        //amount0 = IERC20(zap.token0).balanceOf(address(this));
-        //amount1 = IERC20(zap.token1).balanceOf(address(this));
 
         _approveTokenIfNeeded(zap.token0, zap.pool, amount0);
         _approveTokenIfNeeded(zap.token1, zap.pool, amount1);
