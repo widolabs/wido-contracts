@@ -12,7 +12,7 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
 
     WidoZapperGammaRetro zapper;
 
-    address constant UNI_ROUTER = address(0xf5b509bB0909a69B1c207E495f687a596C168E12);
+    address constant UNI_ROUTER = address(0x1891783cb3497Fdad1F25C933225243c2c7c4102);
 
     struct Pool {
         address pool_address;
@@ -35,7 +35,10 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
 
         vm.label(UNI_ROUTER, "UNI_ROUTER");
 
-        pools.push(Pool(address(0xe7806B5ba13d4B2Ab3EaB3061cB31d4a4F3390Aa), 150e18, 1e18)); // WMATIC-WETH
+        //pools.push(Pool(address(0xe7806B5ba13d4B2Ab3EaB3061cB31d4a4F3390Aa), 150e18, 5e16)); // WMATIC-WETH
+        //pools.push(Pool(address(0x7b4a08284A93c424c9A1Fd99D04Ee4e3c64B041D), 150e18, 150e6)); // WMATIC-USDT
+        pools.push(Pool(address(0xFb730DeD9f9369Df68F4a67633B7B3bE37094EE8), 150e18, 1e18)); // WMATIC-RETRO
+
     }
 
     function test_zapToken0ForLP(uint8 _p) public {
@@ -172,7 +175,7 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
             _amountIn,
             data
         )
-        .mul(994)
+        .mul(993)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
@@ -192,7 +195,7 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
         address _fromAsset,
         address _toAsset,
         uint256 _amountIn
-    ) internal returns (uint256 minToToken){
+    ) internal returns (uint256 minToToken) {
 
         uint256[] memory inMin = new uint256[](4);
         inMin[0] = 0;
@@ -209,7 +212,7 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
             _amountIn,
             data
         )
-        .mul(998)
+        .mul(994)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);

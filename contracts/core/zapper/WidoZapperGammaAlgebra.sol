@@ -28,6 +28,8 @@ interface Hypervisor {
 
     function pool() external pure returns (address);
 
+    function fee() external pure returns (uint8);
+
     function currentTick() external pure returns (int24);
 
     function baseLower() external pure returns (int24);
@@ -231,6 +233,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
 
         _swap(
             address(router),
+            address(pair),
             IERC20(fromToken).balanceOf(address(this)),
             fromToken,
             toToken
@@ -270,6 +273,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         if (zap.fromToken0) {
             _swap(
                 zap.router,
+                zap.pool,
                 zap.amount - amount0,
                 zap.token0,
                 zap.token1
@@ -285,12 +289,18 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
                 // since we know we input less amount,
                 // any amount this function returns should be bigger than our balance
                 amount0 = _getPairAmount(zap.pool, zap.token1, amount1);
+                balanceOut = IERC20(zap.token0).balanceOf(address(this));
+                if (balanceOut < amount0) {
+                    amount0 = balanceOut;
+                    amount1 = _getPairAmount(zap.pool, zap.token0, amount0);
+                }
             }
             //
         }
         else {
             _swap(
                 zap.router,
+                zap.pool,
                 zap.amount - amount1,
                 zap.token1,
                 zap.token0
@@ -301,6 +311,11 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             if (balanceOut < amount0) {
                 amount0 = balanceOut;
                 amount1 = _getPairAmount(zap.pool, zap.token0, amount0);
+                balanceOut = IERC20(zap.token1).balanceOf(address(this));
+                if (balanceOut < amount1) {
+                    amount1 = balanceOut;
+                    amount0 = _getPairAmount(zap.pool, zap.token1, amount1);
+                }
             }
             //
         }
@@ -325,6 +340,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
     /// @dev This function swap amountIn through the path
     function _swap(
         address router,
+        address, //pool
         uint256 amountIn,
         address tokenIn,
         address tokenOut
