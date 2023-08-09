@@ -51,18 +51,19 @@ contract WidoZapperGammaRetro is WidoZapperGammaAlgebra {
     )
     internal virtual override
     returns (uint256 amountOut) {
-        ISwapRouterRetro.ExactInputSingleParams memory params = ISwapRouterRetro.ExactInputSingleParams({
-            tokenIn : tokenIn,
-            tokenOut : tokenOut,
-            fee: IUniswapV3Pool(Hypervisor(pool).pool()).fee(),
-            recipient : address(this),
-            deadline : block.timestamp,
-            amountIn : amountIn,
-            amountOutMinimum : 0,
-            sqrtPriceLimitX96 : 0
-        });
         _approveTokenIfNeeded(tokenIn, router, amountIn);
-        amountOut = ISwapRouterRetro(router).exactInputSingle(params);
+        amountOut = ISwapRouterRetro(router).exactInputSingle(
+            ISwapRouterRetro.ExactInputSingleParams({
+                tokenIn : tokenIn,
+                tokenOut : tokenOut,
+                fee: IUniswapV3Pool(Hypervisor(pool).pool()).fee(),
+                recipient : address(this),
+                deadline : block.timestamp,
+                amountIn : amountIn,
+                amountOutMinimum : 0,
+                sqrtPriceLimitX96 : 0
+            })
+        );
     }
 
 }
