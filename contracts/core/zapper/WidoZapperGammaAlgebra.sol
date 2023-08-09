@@ -93,7 +93,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
 
         // we need the balanced amounts to compute the shares
         {
-            (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
+            uint160 sqrtPriceX96 = _sqrtRatioX96(address(pool));
             (amount0, amount1) = _balancedAmounts(
                 address(pair),
                 sqrtPriceX96,
@@ -133,7 +133,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
 
         (uint amount0, uint amount1) = _getAmountsOut(Hypervisor(address(pair)), amount);
 
-        (uint160 sqrtRatioX96,,,,,,) = pool.globalState();
+        uint160 sqrtRatioX96 = _sqrtRatioX96(address(pool));
         uint256 token0Price = FullMath.mulDiv(sqrtRatioX96.mul(1e18), sqrtRatioX96, 2 ** 192);
 
         if (isZapToToken0) {
@@ -165,7 +165,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         bytes32 positionKey = keccak256(abi.encodePacked(address(hyper), tickLower, tickUpper));
         (uint position, , , ,) = pool.positions(positionKey);
         uint128 liquidity = uint128(position.mul(shares) / hyper.totalSupply());
-        (uint160 sqrtRatioX96, , , , , ,) = pool.globalState();
+        uint160 sqrtRatioX96 = _sqrtRatioX96(address(pool));
         return
         LiquidityAmounts.getAmountsForLiquidity(
             sqrtRatioX96,
@@ -183,7 +183,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         bytes memory extra
     ) internal override returns (uint256 liquidity) {
         IAlgebraPool pool = IAlgebraPool(Hypervisor(address(pair)).pool());
-        (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
+        uint160 sqrtPriceX96 = _sqrtRatioX96(address(pool));
         uint256 amount = IERC20(tokenA).balanceOf(address(this));
         bool fromToken0 = pool.token0() == tokenA;
 
@@ -407,5 +407,9 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
                 amount1 = amount - ((amount0 * token0Price) / 1e18);
             }
         }
+    }
+
+    function _sqrtRatioX96(address _pool) internal view virtual returns (uint160 sqrtPriceX96) {
+        (sqrtPriceX96,,,,,,) = IAlgebraPool(_pool).globalState();
     }
 }
