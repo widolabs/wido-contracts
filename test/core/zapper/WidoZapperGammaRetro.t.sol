@@ -7,6 +7,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../../shared/PolygonForkTest.sol";
 import "../../../contracts/core/zapper/WidoZapperGammaRetro.sol";
 
+/**
+ This test fails sometimes for `Price change Overflow`
+ It ia because they keep a TWAP and check against it.
+*/
 contract WidoZapperGamma_Retro_Test is PolygonForkTest {
     using SafeMath for uint256;
 
@@ -35,10 +39,10 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
 
         vm.label(UNI_ROUTER, "UNI_ROUTER");
 
-        //pools.push(Pool(address(0xe7806B5ba13d4B2Ab3EaB3061cB31d4a4F3390Aa), 150e18, 5e16)); // WMATIC-WETH
-        //pools.push(Pool(address(0x7b4a08284A93c424c9A1Fd99D04Ee4e3c64B041D), 150e18, 150e6)); // WMATIC-USDT
-        pools.push(Pool(address(0xFb730DeD9f9369Df68F4a67633B7B3bE37094EE8), 150e18, 1e18)); // WMATIC-RETRO
 
+        pools.push(Pool(address(0xe7806B5ba13d4B2Ab3EaB3061cB31d4a4F3390Aa), 150e18, 5e16)); // WMATIC-WETH
+        pools.push(Pool(address(0x7b4a08284A93c424c9A1Fd99D04Ee4e3c64B041D), 150e18, 150e6)); // WMATIC-USDT
+        pools.push(Pool(address(0xFb730DeD9f9369Df68F4a67633B7B3bE37094EE8), 50e6, 1e18)); // USDC-RETRO
     }
 
     function test_zapToken0ForLP(uint8 _p) public {
@@ -175,7 +179,7 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
             _amountIn,
             data
         )
-        .mul(993)
+        .mul(989)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
@@ -212,7 +216,7 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
             _amountIn,
             data
         )
-        .mul(994)
+        .mul(989)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);

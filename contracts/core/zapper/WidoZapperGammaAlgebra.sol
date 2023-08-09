@@ -253,16 +253,6 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             zap.fromToken0
         );
 
-        /*
-        Thoughts:
-
-        - Gamma doesn't require the ticks to deposit
-        - We need the ticks only to compute the correct balanced amounts
-        - With `getDepositAmount` from `UniProxy` we can get the `amount of token to deposit for the given amount of pair token`
-            - I understand that means `amount0 given amount1`
-        - If that is the case we can use that function to get the ratio and balance amounts
-*/
-
         // now we know how much of each token we need, so we can sell the difference
         //
         // The swap is not always going to be exact, so afterwards we check how much token we received,
