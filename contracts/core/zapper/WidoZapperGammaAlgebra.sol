@@ -28,6 +28,8 @@ interface Hypervisor {
 
     function pool() external pure returns (address);
 
+    function fee() external pure returns (uint8);
+
     function currentTick() external pure returns (int24);
 
     function baseLower() external pure returns (int24);
@@ -93,7 +95,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
 
         // we need the balanced amounts to compute the shares
         {
-            (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
+            uint160 sqrtPriceX96 = _sqrtRatioX96(address(pool));
             (amount0, amount1) = _balancedAmounts(
                 address(pair),
                 sqrtPriceX96,
@@ -133,7 +135,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
 
         (uint amount0, uint amount1) = _getAmountsOut(Hypervisor(address(pair)), amount);
 
-        (uint160 sqrtRatioX96,,,,,,) = pool.globalState();
+        uint160 sqrtRatioX96 = _sqrtRatioX96(address(pool));
         uint256 token0Price = FullMath.mulDiv(sqrtRatioX96.mul(1e18), sqrtRatioX96, 2 ** 192);
 
         if (isZapToToken0) {
@@ -165,7 +167,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         bytes32 positionKey = keccak256(abi.encodePacked(address(hyper), tickLower, tickUpper));
         (uint position, , , ,) = pool.positions(positionKey);
         uint128 liquidity = uint128(position.mul(shares) / hyper.totalSupply());
-        (uint160 sqrtRatioX96, , , , , ,) = pool.globalState();
+        uint160 sqrtRatioX96 = _sqrtRatioX96(address(pool));
         return
         LiquidityAmounts.getAmountsForLiquidity(
             sqrtRatioX96,
@@ -183,7 +185,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         bytes memory extra
     ) internal override returns (uint256 liquidity) {
         IAlgebraPool pool = IAlgebraPool(Hypervisor(address(pair)).pool());
-        (uint160 sqrtPriceX96,,,,,,) = pool.globalState();
+        uint160 sqrtPriceX96 = _sqrtRatioX96(address(pool));
         uint256 amount = IERC20(tokenA).balanceOf(address(this));
         bool fromToken0 = pool.token0() == tokenA;
 
@@ -231,6 +233,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
 
         _swap(
             address(router),
+            address(pair),
             IERC20(fromToken).balanceOf(address(this)),
             fromToken,
             toToken
@@ -250,16 +253,6 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             zap.fromToken0
         );
 
-        /*
-        Thoughts:
-
-        - Gamma doesn't require the ticks to deposit
-        - We need the ticks only to compute the correct balanced amounts
-        - With `getDepositAmount` from `UniProxy` we can get the `amount of token to deposit for the given amount of pair token`
-            - I understand that means `amount0 given amount1`
-        - If that is the case we can use that function to get the ratio and balance amounts
-*/
-
         // now we know how much of each token we need, so we can sell the difference
         //
         // The swap is not always going to be exact, so afterwards we check how much token we received,
@@ -270,6 +263,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
         if (zap.fromToken0) {
             _swap(
                 zap.router,
+                zap.pool,
                 zap.amount - amount0,
                 zap.token0,
                 zap.token1
@@ -285,12 +279,18 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
                 // since we know we input less amount,
                 // any amount this function returns should be bigger than our balance
                 amount0 = _getPairAmount(zap.pool, zap.token1, amount1);
+                balanceOut = IERC20(zap.token0).balanceOf(address(this));
+                if (balanceOut < amount0) {
+                    amount0 = balanceOut;
+                    amount1 = _getPairAmount(zap.pool, zap.token0, amount0);
+                }
             }
             //
         }
         else {
             _swap(
                 zap.router,
+                zap.pool,
                 zap.amount - amount1,
                 zap.token1,
                 zap.token0
@@ -301,6 +301,11 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
             if (balanceOut < amount0) {
                 amount0 = balanceOut;
                 amount1 = _getPairAmount(zap.pool, zap.token0, amount0);
+                balanceOut = IERC20(zap.token1).balanceOf(address(this));
+                if (balanceOut < amount1) {
+                    amount1 = balanceOut;
+                    amount0 = _getPairAmount(zap.pool, zap.token1, amount1);
+                }
             }
             //
         }
@@ -325,6 +330,7 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
     /// @dev This function swap amountIn through the path
     function _swap(
         address router,
+        address, //pool
         uint256 amountIn,
         address tokenIn,
         address tokenOut
@@ -407,5 +413,9 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
                 amount1 = amount - ((amount0 * token0Price) / 1e18);
             }
         }
+    }
+
+    function _sqrtRatioX96(address _pool) internal view virtual returns (uint160 sqrtPriceX96) {
+        (sqrtPriceX96,,,,,,) = IAlgebraPool(_pool).globalState();
     }
 }
