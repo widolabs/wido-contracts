@@ -4,19 +4,19 @@ pragma solidity ^0.8.7;
 import "forge-std/Test.sol";
 import "forge-std/StdUtils.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../../shared/PolygonForkTest.sol";
-import "../../../contracts/core/zapper/WidoZapperGammaRetro.sol";
+import "../../shared/MainnetForkTest.sol";
+import "../../../contracts/core/zapper/WidoZapperGammaUniV3.sol";
 
 /**
  This test fails sometimes for `Price change Overflow`
  It ia because they keep a TWAP and check against it.
 */
-contract WidoZapperGamma_Retro_Test is PolygonForkTest {
+contract WidoZapperGamma_UniV3_Test is MainnetForkTest {
     using SafeMath for uint256;
 
-    WidoZapperGammaRetro zapper;
+    WidoZapperGammaUniV3 zapper;
 
-    address constant UNI_ROUTER = address(0x1891783cb3497Fdad1F25C933225243c2c7c4102);
+    address constant UNI_ROUTER = address(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
 
     struct Pool {
         address pool_address;
@@ -34,15 +34,15 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
     function setUp() public {
         setUpBase();
 
-        zapper = new WidoZapperGammaRetro();
+        zapper = new WidoZapperGammaUniV3();
         vm.label(address(zapper), "Zapper");
 
         vm.label(UNI_ROUTER, "UNI_ROUTER");
 
-
-        pools.push(Pool(address(0xe7806B5ba13d4B2Ab3EaB3061cB31d4a4F3390Aa), 150e18, 5e16)); // WMATIC-WETH
-        pools.push(Pool(address(0x7b4a08284A93c424c9A1Fd99D04Ee4e3c64B041D), 150e18, 150e6)); // WMATIC-USDT
-        pools.push(Pool(address(0xFb730DeD9f9369Df68F4a67633B7B3bE37094EE8), 50e6, 1e18)); // USDC-RETRO
+        pools.push(Pool(address(0xA9782a2C9C3Fb83937f14cDfAc9a6d23946C9255), 50e6, 1e18)); // USDC-WETH
+        pools.push(Pool(address(0xa8076aE31e4B6c64D07b1Ed27889924a962a70d3), 1e18, 1e18)); // rETH-WETH
+        pools.push(Pool(address(0x35aBccd8e577607275647edAb08C537fa32CC65E), 1e8, 1e18)); // WBTC-WETH
+        pools.push(Pool(address(0xe1ae05518a67EBe7e1E08e3B22D905d6c05b6C0F), 10e18, 50e6)); // H20-USDC
     }
 
     function test_zapToken0ForLP(uint8 _p) public {
@@ -157,7 +157,7 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
 
     function _zapIn(
         address pool,
-        WidoZapperGammaRetro _zapper,
+        WidoZapperGammaUniV3 _zapper,
         address _fromAsset,
         uint256 _amountIn
     ) internal returns (uint256 minToToken){
@@ -195,7 +195,7 @@ contract WidoZapperGamma_Retro_Test is PolygonForkTest {
     }
 
     function _zapOut(
-        WidoZapperGammaRetro _zapper,
+        WidoZapperGammaUniV3 _zapper,
         address _fromAsset,
         address _toAsset,
         uint256 _amountIn
