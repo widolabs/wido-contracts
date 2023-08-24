@@ -11,7 +11,7 @@ import "../../../contracts/core/zapper/WidoZapperGammaUniV3.sol";
  This test fails sometimes for `Price change Overflow`
  It ia because they keep a TWAP and check against it.
 */
-contract WidoZapperGamma_UniV3_Test is MainnetForkTest {
+contract WidoZapperGamma_UniV3_ETH_Test is MainnetForkTest {
     using SafeMath for uint256;
 
     WidoZapperGammaUniV3 zapper;
