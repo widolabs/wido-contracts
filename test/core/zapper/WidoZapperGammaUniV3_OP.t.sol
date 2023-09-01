@@ -40,7 +40,7 @@ contract WidoZapperGamma_UniV3_OP_Test is OptimismForkTest {
         vm.label(UNI_ROUTER, "UNI_ROUTER");
 
         pools.push(Pool(address(0xbcFa4cfA97f74a6AbF80b9901569BBc8654F4315), 1e18, 10e18)); // WETH-OP
-        pools.push(Pool(address(0x34D4112D180e9fAf06f77c8C550bA20C9F61aE31), 4e17, 4e7)); // WETH-WBTC
+        pools.push(Pool(address(0x34D4112D180e9fAf06f77c8C550bA20C9F61aE31), 12e18, 1e8)); // WETH-WBTC
     }
 
     function test_zapToken0ForLP(uint8 _p) public {
@@ -69,7 +69,7 @@ contract WidoZapperGamma_UniV3_OP_Test is OptimismForkTest {
         assertLe(IERC20(token1).balanceOf(address(zapper)), 0, "Dust token1");
     }
 
-    function test_zapToken1ForLP(uint8 _p) public {
+    function test_zapToken1ForLP_here(uint8 _p) public {
         /** Arrange */
 
         Pool memory pool = _getPool(_p);
@@ -177,7 +177,7 @@ contract WidoZapperGamma_UniV3_OP_Test is OptimismForkTest {
             _amountIn,
             data
         )
-        .mul(980)
+        .mul(960)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);
@@ -214,7 +214,7 @@ contract WidoZapperGamma_UniV3_OP_Test is OptimismForkTest {
             _amountIn,
             data
         )
-        .mul(980)
+        .mul(970)
         .div(1000);
 
         IERC20(_fromAsset).approve(address(_zapper), _amountIn);

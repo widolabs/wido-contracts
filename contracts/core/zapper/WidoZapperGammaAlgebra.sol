@@ -90,33 +90,27 @@ contract WidoZapperGammaAlgebra is WidoZapper_ERC20_ERC20 {
     ) external view virtual override returns (uint256 minToToken) {
         Hypervisor hyper = Hypervisor(address(pair));
         IAlgebraPool pool = IAlgebraPool(Hypervisor(address(pair)).pool());
-        uint256 amount0;
-        uint256 amount1;
 
         // we need the balanced amounts to compute the shares
-        {
-            uint160 sqrtPriceX96 = _sqrtRatioX96(address(pool));
-            (amount0, amount1) = _balancedAmounts(
-                address(pair),
-                sqrtPriceX96,
-                amount,
-                pair.token0() == fromToken
-            );
-        }
+        uint160 sqrtPriceX96 = _sqrtRatioX96(address(pool));
+        (uint256 amount0, uint256 amount1) = _balancedAmounts(
+            address(pair),
+            sqrtPriceX96,
+            amount,
+            pair.token0() == fromToken
+        );
+
         // Following is how Gamma computes the `shares` when you deposit.
-        // shares is what we call liquidity here.
+        // shares is what we call liquidity.
         // What they internally call liquidity is the amount of liquidity added on each tick
-        //  but those two added don't equal to the shares
+        //  but those two numbers added do not equal to the number of shares.
 
         (uint256 pool0, uint256 pool1) = hyper.getTotalAmounts();
         uint256 total = hyper.totalSupply();
-
-        uint160 sqrtPrice = TickMath.getSqrtRatioAtTick(hyper.currentTick());
-        uint256 price = FullMath.mulDiv(uint256(sqrtPrice).mul(uint256(sqrtPrice)), 1e36, 2**(96 * 2));
-
+        uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96).mul(uint256(sqrtPriceX96)), 1e36, 2**(96 * 2));
         uint256 shares = amount1.add(amount0.mul(price) / 1e36);
-
         uint256 pool0PricedInToken1 = pool0.mul(price) / 1e36;
+
         minToToken = shares.mul(total) / pool0PricedInToken1.add(pool1);
     }
 
