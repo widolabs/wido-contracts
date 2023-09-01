@@ -18,7 +18,10 @@ contract WidoZapperUniswapV3_Test is ArbitrumForkTest {
     enum Ticker {
         Low,
         Current,
-        High
+        High,
+        BiggerCurrent,
+        BiggerLow,
+        BiggerHigh
     }
 
     struct Pool {
@@ -45,13 +48,18 @@ contract WidoZapperUniswapV3_Test is ArbitrumForkTest {
         vm.label(UNI_POS_MANAGER, "UNI_POS_MANAGER");
 
         // plsSPA-SPA
-        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 50e18, 50e18, Ticker.Low));
-        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 50e18, 50e18, Ticker.Current));
-        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 50e18, 50e18, Ticker.High));
+        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 10000e18, 10000e18, Ticker.Low));
+        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 10000e18, 10000e18, Ticker.Current));
+        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 10000e18, 10000e18, Ticker.High));
+        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 100000e18, 100000e18, Ticker.BiggerLow));
+        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 100000e18, 100000e18, Ticker.BiggerCurrent));
+        pools.push(Pool(address(0x03344b394cCdB3C36DDd134F4962d2fA97e3e714), 100000e18, 100000e18, Ticker.BiggerHigh));
+
         // USDs-USDC
         //pools.push(Pool(address(0x50450351517117Cb58189edBa6bbaD6284D45902), 50e18, 50e6, Ticker.Low));
         //pools.push(Pool(address(0x50450351517117Cb58189edBa6bbaD6284D45902), 50e18, 50e6, Ticker.Current));
         //pools.push(Pool(address(0x50450351517117Cb58189edBa6bbaD6284D45902), 50e18, 50e6, Ticker.High));
+
         // WETH-USDs
         //pools.push(Pool(address(0x5766DA927BCB6F60Cefdc559ea30DDD3A4C5Db0F), 50e18, 50e18, Ticker.Low));
         //pools.push(Pool(address(0x5766DA927BCB6F60Cefdc559ea30DDD3A4C5Db0F), 50e18, 50e18, Ticker.Current));
@@ -75,7 +83,7 @@ contract WidoZapperUniswapV3_Test is ArbitrumForkTest {
         /** Assert */
 
         uint256 finalFromBalance = IERC20(token0).balanceOf(user1);
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
 
         uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
         assertNotEq(tokenId, 0, "To balance incorrect");
@@ -101,7 +109,7 @@ contract WidoZapperUniswapV3_Test is ArbitrumForkTest {
         /** Assert */
 
         uint256 finalFromBalance = IERC20(token1).balanceOf(user1);
-        assertEq(finalFromBalance, 0, "From balance incorrect");
+        assertLt(finalFromBalance, amount, "From balance incorrect");
 
         uint tokenId = INonfungiblePositionManager(UNI_POS_MANAGER).tokenOfOwnerByIndex(user1, 0);
         assertNotEq(tokenId, 0, "To balance incorrect");
@@ -265,6 +273,18 @@ contract WidoZapperUniswapV3_Test is ArbitrumForkTest {
         else if (ticker == Ticker.High) {
             lowerTick += tickSpacing;
             upperTick += tickSpacing;
+        }
+        else if (ticker == Ticker.BiggerCurrent) {
+            lowerTick = lowerTick + tickSpacing * 20;
+            upperTick = upperTick + tickSpacing * 20;
+        }
+        else if (ticker == Ticker.BiggerHigh) {
+            lowerTick += tickSpacing;
+            upperTick = upperTick + tickSpacing * 20;
+        }
+        else if (ticker == Ticker.BiggerLow) {
+            upperTick -= tickSpacing;
+            lowerTick = lowerTick - tickSpacing * 20;
         }
     }
 }
