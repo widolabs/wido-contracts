@@ -221,7 +221,14 @@ contract WidoZapperUniswapV3 is IERC721Receiver {
 
         require(toTokenAmount >= order.minToToken, "Slippage too high");
 
-        IERC20(order.toToken).safeTransfer(order.recipient, toTokenAmount);
+        amount0 = IERC20(token0).balanceOf(address(this));
+        if (amount0 > 0) {
+            IERC20(token0).safeTransfer(order.recipient, amount0);
+        }
+        amount1 = IERC20(token1).balanceOf(address(this));
+        if (amount1 > 0) {
+            IERC20(token1).safeTransfer(order.recipient, amount1);
+        }
     }
 
     function _removeLiquidity(INonfungiblePositionManager nonfungiblePositionManager, ZapOutOrder memory order)

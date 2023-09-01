@@ -14,6 +14,8 @@ interface IUniswapV3Pool {
 
     function factory() external view returns (address);
 
+    function tickSpacing() external view returns (int24);
+
     function slot0()
     external
     view
