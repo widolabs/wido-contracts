@@ -36,5 +36,6 @@ optimism = "${ETH_NODE_URI_OPTIMISM}"
 arbitrum = "${ETH_NODE_URI_ARBITRUM}"
 polygon = "${ETH_NODE_URI_POLYGON}"
 bsc = "${ETH_NODE_URI_BSC}"
+base = "${ETH_NODE_URI_BASE}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
