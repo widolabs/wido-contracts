@@ -28,6 +28,7 @@ arbitrum = { key = "${ARBISCAN_API_KEY}", url = "https://api.arbiscan.io/api" }
 optimism = { key = "${OPTIMISTIC_API_KEY}", url = "https://api-optimistic.etherscan.io/api" }
 bsc = { key = "${BSCSCAN_API_KEY}", url = "https://api.bscscan.com/api" }
 avalanche = { key = "${SNOWTRACE_API_KEY}", url = "https://api.snowtrace.io/api" }
+base = { key = "5B1SUDK4HJSNH15FGFRN5SNTQ73ZVTAI87", url = "https://api.basescan.org/api" }
 
 [rpc_endpoints]
 mainnet = "${ETH_NODE_URI_MAINNET}"
