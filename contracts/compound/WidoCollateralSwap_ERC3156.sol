@@ -9,6 +9,8 @@ import {IComet} from "./interfaces/IComet.sol";
 import {LibCollateralSwap} from "./libraries/LibCollateralSwap.sol";
 import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
 
+/// @title WidoCollateralSwap_ERC3156
+/// @notice Contract enables swaps between arbitrary tokens and integrates ERC-3156 compliant flash loan services.
 contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwap {
     using SafeMath for uint256;
 

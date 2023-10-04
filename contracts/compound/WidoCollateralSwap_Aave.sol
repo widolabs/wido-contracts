@@ -11,6 +11,8 @@ import {IComet} from "./interfaces/IComet.sol";
 import {LibCollateralSwap} from "./libraries/LibCollateralSwap.sol";
 import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
 
+/// @title WidoCollateralSwap_Aave
+/// @notice Contract enables swaps between arbitrary tokens and leverages Aave's flash loan services.
 contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwap {
     using SafeMath for uint256;
 

@@ -6,6 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {IComet} from "../interfaces/IComet.sol";
 
+/// @title LibCollateralSwap Library
+/// @notice Supports swapping collateral assets on Compound V3 via Wido's contracts, flash loans and Aave's services.
 library LibCollateralSwap {
     using SafeMath for uint256;
 
