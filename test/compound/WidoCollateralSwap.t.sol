@@ -78,14 +78,6 @@ contract WidoCollateralSwapTest is MainnetForkTest {
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
 
-        // define expected Event
-        vm.expectEmit(true, true, false, false);
-        emit SupplyCollateral(address(_collateralSwap), user1, address(0), 0);
-
-        // define expected Event
-        vm.expectEmit(true, true, false, false);
-        emit WithdrawCollateral(user1, address(_collateralSwap), address(0), 0);
-
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
         LibCollateralSwap.Signature memory allowSignature = _sign(
@@ -115,6 +107,14 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             address(widoTokenManager),
             _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap))
         );
+
+        // define expected Event
+        vm.expectEmit(true, true, false, false);
+        emit SupplyCollateral(address(_collateralSwap), user1, address(0), 0);
+
+        // define expected Event
+        vm.expectEmit(true, true, false, false);
+        emit WithdrawCollateral(user1, address(_collateralSwap), address(0), 0);
 
         /** Act */
 
@@ -156,14 +156,6 @@ contract WidoCollateralSwapTest is MainnetForkTest {
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
 
-        // define expected Event
-        vm.expectEmit(true, true, false, false);
-        emit SupplyCollateral(address(_collateralSwap), user1, address(0), 0);
-
-        // define expected Event
-        vm.expectEmit(true, true, false, false);
-        emit WithdrawCollateral(user1, address(_collateralSwap), address(0), 0);
-
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
         LibCollateralSwap.Signature memory allowSignature = _sign(
@@ -196,6 +188,14 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             address(widoTokenManager),
             _generateWidoRouterCalldata(existingCollateral, finalCollateral, _outputAmount, address(_collateralSwap))
         );
+        
+        // define expected Event
+        vm.expectEmit(true, true, false, false);
+        emit SupplyCollateral(address(_collateralSwap), user1, address(0), 0);
+
+        // define expected Event
+        vm.expectEmit(true, true, false, false);
+        emit WithdrawCollateral(user1, address(_collateralSwap), address(0), 0);
 
         /** Act */
 
