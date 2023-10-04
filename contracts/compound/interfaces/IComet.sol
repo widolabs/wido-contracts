@@ -3,9 +3,9 @@
 pragma solidity 0.8.7;
 
 interface IComet {
-    function withdrawFrom(address src, address to, address asset, uint amount) external;
+    function withdrawFrom(address src, address to, address asset, uint256 amount) external;
 
-    function supplyTo(address dst, address asset, uint amount) external;
+    function supplyTo(address dst, address asset, uint256 amount) external;
 
     function userNonce(address user) external returns (uint256);
 
