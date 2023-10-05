@@ -56,12 +56,13 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
     /// @notice Callback to be executed by the flash loan provider
     /// @dev Only allow-listed providers should have access
     function onFlashLoan(
-        address /* initiator */,
+        address initiator,
         address borrowedAsset,
         uint256 borrowedAmount,
         uint256 fee,
         bytes calldata data
     ) external override returns (bytes32) {
+        require(initiator == address(this), "Unauthorised initiator");
         if (msg.sender != address(loanProvider)) {
             revert InvalidProvider();
         }

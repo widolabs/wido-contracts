@@ -69,9 +69,10 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
         address asset,
         uint256 amount,
         uint256 premium,
-        address /*initiator*/,
+        address initiator,
         bytes calldata params
     ) external override returns (bool) {
+        require(initiator == address(this), "Unauthorised initiator");
         if (msg.sender != address(POOL)) {
             revert InvalidProvider();
         }
