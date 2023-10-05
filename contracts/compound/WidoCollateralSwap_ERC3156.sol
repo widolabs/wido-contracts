@@ -17,11 +17,15 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
 
     /// @dev The typehash for the ERC-3156 `onFlashLoan` return
     bytes32 internal constant ON_FLASH_LOAN_RESPONSE = keccak256("ERC3156FlashBorrower.onFlashLoan");
+    
+    /// @dev Comet Market contract
+    IComet public immutable COMET_MARKET;
 
     error InvalidProvider();
 
-    constructor(IERC3156FlashLender _loanProvider) {
+    constructor(IERC3156FlashLender _loanProvider, IComet _cometMarket) {
         loanProvider = _loanProvider;
+        COMET_MARKET = _cometMarket;
     }
 
     /// @notice Performs a collateral swap
@@ -29,17 +33,14 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
     /// @param finalCollateral The final collateral desired collateral
     /// @param sigs The required signatures to allow and revoke permission to this contract
     /// @param swap The necessary data to swap one collateral for the other
-    /// @param comet The address of the Comet contract to interact with
     function swapCollateral(
         LibCollateralSwap.Collateral calldata existingCollateral,
         LibCollateralSwap.Collateral calldata finalCollateral,
         LibCollateralSwap.Signatures calldata sigs,
-        LibCollateralSwap.WidoSwap calldata swap,
-        address comet
+        LibCollateralSwap.WidoSwap calldata swap
     ) external override {
         bytes memory data = abi.encode(
             msg.sender,
-            comet,
             existingCollateral,
             sigs,
             swap
@@ -66,7 +67,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
             revert InvalidProvider();
         }
 
-        LibCollateralSwap.performCollateralSwap(borrowedAsset, borrowedAmount, fee, data);
+        LibCollateralSwap.performCollateralSwap(borrowedAsset, borrowedAmount, fee, COMET_MARKET, data);
 
         // approve loan provider to pull lent amount + fee
         IERC20(borrowedAsset).approve(

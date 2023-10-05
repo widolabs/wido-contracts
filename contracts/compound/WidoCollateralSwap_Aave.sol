@@ -19,12 +19,16 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
 
     /// @dev Aave Pool contract
     IPool public immutable override POOL;
+    
+    /// @dev Comet Market contract
+    IComet public immutable COMET_MARKET;
 
     error InvalidProvider();
 
-    constructor(IPoolAddressesProvider _addressProvider) {
+    constructor(IPoolAddressesProvider _addressProvider, IComet _cometMarket) {
         ADDRESSES_PROVIDER = _addressProvider;
         POOL = IPool(_addressProvider.getPool());
+        COMET_MARKET = _cometMarket;
     }
 
     /// @notice Performs a collateral swap with Aave
@@ -32,17 +36,14 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
     /// @param finalCollateral The final collateral desired collateral
     /// @param sigs The required signatures to allow and revoke permission to this contract
     /// @param swap The necessary data to swap one collateral for the other
-    /// @param comet The address of the Comet contract to interact with
     function swapCollateral(
         LibCollateralSwap.Collateral calldata existingCollateral,
         LibCollateralSwap.Collateral calldata finalCollateral,
         LibCollateralSwap.Signatures calldata sigs,
-        LibCollateralSwap.WidoSwap calldata swap,
-        address comet
+        LibCollateralSwap.WidoSwap calldata swap
     ) external override {
         bytes memory data = abi.encode(
             msg.sender,
-            comet,
             existingCollateral,
             sigs,
             swap
@@ -76,7 +77,7 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
             revert InvalidProvider();
         }
 
-        LibCollateralSwap.performCollateralSwap(asset, amount, premium, params);
+        LibCollateralSwap.performCollateralSwap(asset, amount, premium, COMET_MARKET, params);
 
         // approve loan provider to pull lent amount + fee
         IERC20(asset).approve(
