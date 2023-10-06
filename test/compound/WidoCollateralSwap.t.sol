@@ -44,14 +44,12 @@ contract WidoCollateralSwapTest is MainnetForkTest {
         widoCollateralSwap_Aave = new WidoCollateralSwap_Aave(
             aaveAddressesProvider,
             cometMarketUsdc,
-            address(widoRouter),
-            address(widoTokenManager)
+            payable(address(widoRouter))
         );
         widoCollateralSwap_Equalizer = new WidoCollateralSwap_ERC3156(
             equalizerLender,
             cometMarketUsdc,
-            address(widoRouter),
-            address(widoTokenManager)
+            payable(address(widoRouter))
         );
 
         mockSwap = new MockSwap(

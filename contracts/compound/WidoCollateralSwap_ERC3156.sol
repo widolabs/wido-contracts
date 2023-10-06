@@ -9,6 +9,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {IComet} from "./interfaces/IComet.sol";
 import {LibCollateralSwap} from "./libraries/LibCollateralSwap.sol";
 import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
+import {WidoRouter} from "../core/WidoRouter.sol";
 
 contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwap, ReentrancyGuard {
     using SafeMath for uint256;
@@ -31,11 +32,11 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
     error InvalidProvider();
     error InvalidInitiator();
 
-    constructor(IERC3156FlashLender _loanProvider, IComet _cometMarket, address _widoRouter, address _widoTokenManager) {
+    constructor(IERC3156FlashLender _loanProvider, IComet _cometMarket, address payable _widoRouter) {
         loanProvider = _loanProvider;
         COMET_MARKET = _cometMarket;
         WIDO_ROUTER = _widoRouter;
-        WIDO_TOKEN_MANAGER = _widoTokenManager;
+        WIDO_TOKEN_MANAGER = address(WidoRouter(_widoRouter).widoTokenManager());
     }
 
     /// @notice Performs a collateral swap

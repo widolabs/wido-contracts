@@ -11,6 +11,7 @@ import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {IComet} from "./interfaces/IComet.sol";
 import {LibCollateralSwap} from "./libraries/LibCollateralSwap.sol";
 import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
+import {WidoRouter} from "../core/WidoRouter.sol";
 
 contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwap, ReentrancyGuard {
     using SafeMath for uint256;
@@ -33,12 +34,12 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
     error InvalidProvider();
     error InvalidInitiator();
 
-    constructor(IPoolAddressesProvider _addressProvider, IComet _cometMarket, address _widoRouter, address _widoTokenManager) {
+    constructor(IPoolAddressesProvider _addressProvider, IComet _cometMarket, address payable _widoRouter) {
         ADDRESSES_PROVIDER = _addressProvider;
         POOL = IPool(_addressProvider.getPool());
         COMET_MARKET = _cometMarket;
         WIDO_ROUTER = _widoRouter;
-        WIDO_TOKEN_MANAGER = _widoTokenManager;
+        WIDO_TOKEN_MANAGER = address(WidoRouter(_widoRouter).widoTokenManager());
     }
 
     /// @notice Performs a collateral swap with Aave
