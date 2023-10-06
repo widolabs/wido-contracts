@@ -20,6 +20,7 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
     IPool public immutable override POOL;
 
     error InvalidProvider();
+    error InvalidInitiator();
 
     constructor(IPoolAddressesProvider _addressProvider) {
         ADDRESSES_PROVIDER = _addressProvider;
@@ -68,9 +69,12 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
         address asset,
         uint256 amount,
         uint256 premium,
-        address /*initiator*/,
+        address initiator,
         bytes calldata params
     ) external override returns (bool) {
+        if (initiator != address(this)) {
+            revert InvalidInitiator();
+        }
         if (msg.sender != address(POOL)) {
             revert InvalidProvider();
         }
