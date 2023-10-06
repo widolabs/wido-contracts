@@ -10,6 +10,7 @@ library LibCollateralSwap {
     using SafeMath for uint256;
 
     error WidoRouterFailed();
+    error InvalidSwapOutputToken();
 
     struct Collateral {
         address addr;
@@ -58,8 +59,15 @@ library LibCollateralSwap {
         // withdraw existing collateral
         _withdrawFrom(comet, user, existingCollateral, signatures);
 
+        // Store the initial balance of the borrowed asset in this contract
+        uint256 borrowedAssetBalanceBeforeSwap = IERC20(borrowedAsset).balanceOf(address(this));
+
         // execute swap
         _swap(existingCollateral, swapDetails);
+
+        // Ensure that the swap operation has returned the correct token by comparing the balances before and after the swap.
+        // This step verifies that the swap destination token type is the same as the flash loan token type, to avoid accidentally swapping to an incorrect asset.
+        if (IERC20(borrowedAsset).balanceOf(address(this)) <= borrowedAssetBalanceBeforeSwap) revert InvalidSwapOutputToken();
 
         // check amount of surplus collateral
         uint256 surplusAmount = IERC20(borrowedAsset).balanceOf(address(this)) - borrowedAmount - fee;
