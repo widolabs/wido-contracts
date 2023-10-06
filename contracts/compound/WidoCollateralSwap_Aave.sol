@@ -44,6 +44,7 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
     ) external override {
         bytes memory data = abi.encode(
             msg.sender,
+            COMET_MARKET,
             existingCollateral,
             sigs,
             swap
@@ -77,7 +78,7 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
             revert InvalidProvider();
         }
 
-        LibCollateralSwap.performCollateralSwap(asset, amount, premium, COMET_MARKET, params);
+        LibCollateralSwap.performCollateralSwap(asset, amount, premium, params);
 
         // approve loan provider to pull lent amount + fee
         IERC20(asset).approve(

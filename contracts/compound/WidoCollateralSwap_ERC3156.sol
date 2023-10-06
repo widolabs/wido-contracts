@@ -41,6 +41,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
     ) external override {
         bytes memory data = abi.encode(
             msg.sender,
+            COMET_MARKET,
             existingCollateral,
             sigs,
             swap
@@ -67,7 +68,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
             revert InvalidProvider();
         }
 
-        LibCollateralSwap.performCollateralSwap(borrowedAsset, borrowedAmount, fee, COMET_MARKET, data);
+        LibCollateralSwap.performCollateralSwap(borrowedAsset, borrowedAmount, fee, data);
 
         // approve loan provider to pull lent amount + fee
         IERC20(borrowedAsset).approve(

@@ -38,18 +38,18 @@ library LibCollateralSwap {
         address borrowedAsset,
         uint256 borrowedAmount,
         uint256 fee,
-        IComet comet,
         bytes memory data
     ) external {
         // decode payload
         (
         address user,
+        IComet comet,
         Collateral memory existingCollateral,
         Signatures memory signatures,
         WidoSwap memory swapDetails
         ) = abi.decode(
             data,
-            (address, Collateral, Signatures, WidoSwap)
+            (address, IComet, Collateral, Signatures, WidoSwap)
         );
 
         // supply new collateral on behalf of user
