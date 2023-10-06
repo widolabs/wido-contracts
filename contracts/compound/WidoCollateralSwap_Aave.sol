@@ -4,6 +4,7 @@ pragma solidity 0.8.7;
 
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
@@ -11,7 +12,7 @@ import {IComet} from "./interfaces/IComet.sol";
 import {LibCollateralSwap} from "./libraries/LibCollateralSwap.sol";
 import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
 
-contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwap {
+contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwap, ReentrancyGuard {
     using SafeMath for uint256;
 
     /// @dev Aave addresses provider contract
@@ -82,7 +83,7 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
         uint256 premium,
         address initiator,
         bytes calldata params
-    ) external override returns (bool) {
+    ) external override nonReentrant returns (bool) {
         if (initiator != address(this)) {
             revert InvalidInitiator();
         }

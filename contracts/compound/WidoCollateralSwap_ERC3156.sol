@@ -5,11 +5,12 @@ pragma solidity 0.8.7;
 import {IERC3156FlashBorrower, IERC3156FlashLender} from "./interfaces/IERC3156.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IComet} from "./interfaces/IComet.sol";
 import {LibCollateralSwap} from "./libraries/LibCollateralSwap.sol";
 import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
 
-contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwap {
+contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwap, ReentrancyGuard {
     using SafeMath for uint256;
 
     /// @dev ERC3156 lender contract
@@ -72,7 +73,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
         uint256 borrowedAmount,
         uint256 fee,
         bytes calldata data
-    ) external override returns (bytes32) {
+    ) external override nonReentrant returns (bytes32) {
         if (initiator != address(this)) {
             revert InvalidInitiator();
         }
