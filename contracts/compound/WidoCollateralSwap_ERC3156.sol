@@ -19,6 +19,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
     bytes32 internal constant ON_FLASH_LOAN_RESPONSE = keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     error InvalidProvider();
+    error InvalidInitiator();
 
     constructor(IERC3156FlashLender _loanProvider) {
         loanProvider = _loanProvider;
@@ -62,7 +63,9 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
         uint256 fee,
         bytes calldata data
     ) external override returns (bytes32) {
-        require(initiator == address(this), "Unauthorised initiator");
+        if (initiator != address(this)) {
+            revert InvalidInitiator();
+        }
         if (msg.sender != address(loanProvider)) {
             revert InvalidProvider();
         }
