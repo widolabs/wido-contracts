@@ -9,11 +9,11 @@ interface IWidoCollateralSwap {
     /// @param existingCollateral The collateral currently locked in the Comet contract
     /// @param finalCollateral The final collateral desired collateral
     /// @param sigs The required signatures to allow and revoke permission to this contract
-    /// @param swap The necessary data to swap one collateral for the other
+    /// @param swapCallData The calldata to swap one collateral for the other
     function swapCollateral(
         LibCollateralSwap.Collateral calldata existingCollateral,
         LibCollateralSwap.Collateral calldata finalCollateral,
         LibCollateralSwap.Signatures calldata sigs,
-        LibCollateralSwap.WidoSwap calldata swap
+        bytes calldata swapCallData
     ) external;
 }

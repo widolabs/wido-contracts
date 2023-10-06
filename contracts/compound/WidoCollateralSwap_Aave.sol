@@ -4,13 +4,16 @@ pragma solidity 0.8.7;
 
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
+import {IComet} from "./interfaces/IComet.sol";
 import {LibCollateralSwap} from "./libraries/LibCollateralSwap.sol";
 import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
+import {WidoRouter} from "../core/WidoRouter.sol";
 
-contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwap {
+contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwap, ReentrancyGuard {
     using SafeMath for uint256;
 
     /// @dev Aave addresses provider contract
@@ -22,32 +25,40 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
     /// @dev Comet Market contract
     IComet public immutable COMET_MARKET;
 
+    /// @dev Wido Router contract
+    address public immutable WIDO_ROUTER;
+
+    /// @dev Wido Token Manager contract
+    address public immutable WIDO_TOKEN_MANAGER;
+
     error InvalidProvider();
     error InvalidInitiator();
 
-    constructor(IPoolAddressesProvider _addressProvider, IComet _cometMarket) {
+    constructor(IPoolAddressesProvider _addressProvider, IComet _cometMarket, address payable _widoRouter) {
         ADDRESSES_PROVIDER = _addressProvider;
         POOL = IPool(_addressProvider.getPool());
         COMET_MARKET = _cometMarket;
+        WIDO_ROUTER = _widoRouter;
+        WIDO_TOKEN_MANAGER = address(WidoRouter(_widoRouter).widoTokenManager());
     }
 
     /// @notice Performs a collateral swap with Aave
     /// @param existingCollateral The collateral currently locked in the Comet contract
     /// @param finalCollateral The final collateral desired collateral
     /// @param sigs The required signatures to allow and revoke permission to this contract
-    /// @param swap The necessary data to swap one collateral for the other
+    /// @param swapCallData The calldata to swap one collateral for the other
     function swapCollateral(
         LibCollateralSwap.Collateral calldata existingCollateral,
         LibCollateralSwap.Collateral calldata finalCollateral,
         LibCollateralSwap.Signatures calldata sigs,
-        LibCollateralSwap.WidoSwap calldata swap
+        bytes calldata swapCallData
     ) external override {
         bytes memory data = abi.encode(
             msg.sender,
             COMET_MARKET,
             existingCollateral,
             sigs,
-            swap
+            LibCollateralSwap.WidoSwap(WIDO_ROUTER, WIDO_TOKEN_MANAGER, swapCallData)
         );
 
         POOL.flashLoanSimple(
@@ -73,7 +84,7 @@ contract WidoCollateralSwap_Aave is IFlashLoanSimpleReceiver, IWidoCollateralSwa
         uint256 premium,
         address initiator,
         bytes calldata params
-    ) external override returns (bool) {
+    ) external override nonReentrant returns (bool) {
         if (initiator != address(this)) {
             revert InvalidInitiator();
         }
