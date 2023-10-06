@@ -36,6 +36,10 @@ library LibCollateralSwap {
     }
 
     /// @dev Performs all the steps to swap collaterals on the Comet contract
+    /// @param borrowedAsset The address of the asset that has been borrowed.
+    /// @param borrowedAmount The amount of the asset that has been borrowed.
+    /// @param fee The fee associated with the borrowed asset.
+    /// @param data The encoded payload containing details required for the swap.
     function performCollateralSwap(
         address borrowedAsset,
         uint256 borrowedAmount,

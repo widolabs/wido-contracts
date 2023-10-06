@@ -55,8 +55,15 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
         );
     }
 
-    /// @notice Callback to be executed by the flash loan provider
-    /// @dev Only allow-listed providers should have access
+    /// @notice The function performs a collateral swap, after checking the legitimacy of the loan provider.
+    /// After the swap, it approves the loan provider to withdraw the borrowed amount and the fee.
+    /// @dev This function is the callback executed by the flash loan provider after loan disbursement.
+    /// Only allowed providers can initiate the callback.
+    /// @param borrowedAsset The address of the asset that has been borrowed.
+    /// @param borrowedAmount The amount of the asset that has been borrowed.
+    /// @param fee The fee associated with the borrowed asset.
+    /// @param data Encoded payload provided by the flash loan initiator containing details for the swap.
+    /// @return Returns the standard flash loan response of the callback function.
     function onFlashLoan(
         address /* initiator */,
         address borrowedAsset,
