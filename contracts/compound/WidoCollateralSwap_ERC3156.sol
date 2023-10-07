@@ -12,7 +12,7 @@ import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
 import {WidoRouter} from "../core/WidoRouter.sol";
 
 /// @title WidoCollateralSwap_ERC3156
-/// @notice Contract allows swapping Compound collateral from one token (TokenA) to the other (TokenB) without 
+/// @notice Contract allows swapping Compound collateral from one token (TokenA) to the other (TokenB) without
 /// closing the borrowing position. The contract makes use of flash loans to first supply TokenB,
 /// then withdraws TokenA and swaps it for TokenB and closes the flash loan.
 contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwap, ReentrancyGuard {
@@ -23,7 +23,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
 
     /// @dev The typehash for the ERC-3156 `onFlashLoan` return
     bytes32 internal constant ON_FLASH_LOAN_RESPONSE = keccak256("ERC3156FlashBorrower.onFlashLoan");
-    
+
     /// @dev Comet Market contract
     IComet public immutable COMET_MARKET;
 
@@ -62,12 +62,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
             LibCollateralSwap.WidoSwap(WIDO_ROUTER, WIDO_TOKEN_MANAGER, swapCallData)
         );
 
-        loanProvider.flashLoan(
-            IERC3156FlashBorrower(this),
-            finalCollateral.addr,
-            finalCollateral.amount,
-            data
-        );
+        loanProvider.flashLoan(IERC3156FlashBorrower(this), finalCollateral.addr, finalCollateral.amount, data);
     }
 
     /// @notice Executes the collateral swap after receiving the flash-borrowed asset
@@ -95,10 +90,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
         LibCollateralSwap.performCollateralSwap(borrowedAsset, borrowedAmount, fee, data);
 
         // approve loan provider to pull lent amount + fee
-        IERC20(borrowedAsset).approve(
-            address(loanProvider),
-            borrowedAmount.add(fee)
-        );
+        IERC20(borrowedAsset).approve(address(loanProvider), borrowedAmount.add(fee));
 
         return ON_FLASH_LOAN_RESPONSE;
     }
