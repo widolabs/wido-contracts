@@ -76,7 +76,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
     /// @param borrowedAsset The address of the asset that has been borrowed.
     /// @param borrowedAmount The amount of the asset that has been borrowed.
     /// @param fee The fee associated with the borrowed asset.
-    /// @param params The byte-encoded params for the collateral swap passed when initiating the flashloan
+    /// @param data The byte-encoded params for the collateral swap passed when initiating the flashloan
     /// @return Returns the standard flash loan response of the callback function.
     function onFlashLoan(
         address initiator,
