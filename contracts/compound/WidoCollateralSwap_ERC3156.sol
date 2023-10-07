@@ -11,6 +11,10 @@ import {LibCollateralSwap} from "./libraries/LibCollateralSwap.sol";
 import {IWidoCollateralSwap} from "./interfaces/IWidoCollateralSwap.sol";
 import {WidoRouter} from "../core/WidoRouter.sol";
 
+/// @title WidoCollateralSwap_ERC3156
+/// @notice Contract allows swapping Compound collateral from one token (TokenA) to the other (TokenB) without 
+/// closing the borrowing position. The contract makes use of flash loans to first supply TokenB,
+/// then withdraws TokenA and swaps it for TokenB and closes the flash loan.
 contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwap, ReentrancyGuard {
     using SafeMath for uint256;
 
@@ -39,7 +43,7 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
         WIDO_TOKEN_MANAGER = address(WidoRouter(_widoRouter).widoTokenManager());
     }
 
-    /// @notice Performs a collateral swap
+    /// @notice Performs a Compound collateral swap using an ERC3156 compliant flash loan provider.
     /// @param existingCollateral The collateral currently locked in the Comet contract
     /// @param finalCollateral The final collateral desired collateral
     /// @param sigs The required signatures to allow and revoke permission to this contract
@@ -66,8 +70,14 @@ contract WidoCollateralSwap_ERC3156 is IERC3156FlashBorrower, IWidoCollateralSwa
         );
     }
 
-    /// @notice Callback to be executed by the flash loan provider
-    /// @dev Only allow-listed providers should have access
+    /// @notice Executes the collateral swap after receiving the flash-borrowed asset
+    /// @dev This function is the callback executed by the flash loan provider after loan disbursement.
+    /// Only allowed providers can initiate the callback.
+    /// @param borrowedAsset The address of the asset that has been borrowed.
+    /// @param borrowedAmount The amount of the asset that has been borrowed.
+    /// @param fee The fee associated with the borrowed asset.
+    /// @param params The byte-encoded params for the collateral swap passed when initiating the flashloan
+    /// @return Returns the standard flash loan response of the callback function.
     function onFlashLoan(
         address initiator,
         address borrowedAsset,

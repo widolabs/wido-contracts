@@ -6,6 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {IComet} from "../interfaces/IComet.sol";
 
+/// @title LibCollateralSwap Library
+/// @notice Helper functions to swap collateral assets on Compound V3.
 library LibCollateralSwap {
     using SafeMath for uint256;
 
@@ -34,7 +36,11 @@ library LibCollateralSwap {
         bytes callData;
     }
 
-    /// @dev Performs all the steps to swap collaterals on the Comet contract
+    /// @dev Performs supply, withdraw and swap steps to swap collaterals on the Comet contract
+    /// @param borrowedAsset The address of the asset that has been borrowed.
+    /// @param borrowedAmount The amount of the asset that has been borrowed.
+    /// @param fee The fee associated with the borrowed asset.
+    /// @param data The encoded payload containing details required for the swap.
     function performCollateralSwap(
         address borrowedAsset,
         uint256 borrowedAmount,
@@ -113,8 +119,8 @@ library LibCollateralSwap {
     }
 
     /// @dev This function withdraws the collateral from the user.
-    ///  It requires two consecutive EIP712 signatures to allow and revoke
-    ///  permissions to and from this contract.
+    /// It requires two consecutive EIP712 signatures to allow and revoke
+    /// permissions to and from this contract.
     function _withdrawFrom(
         IComet comet,
         address user,
