@@ -29,9 +29,11 @@ contract WidoCollateralSwapTest is MainnetForkTest {
     IERC3156FlashLender constant equalizerLender = IERC3156FlashLender(0x4EAF187ad4cE325bF6C84070b51c2f7224A51321);
     IPoolAddressesProvider constant aaveAddressesProvider = IPoolAddressesProvider(0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e);
     ICometTest constant cometUsdc = ICometTest(0xc3d688B66703497DAA19211EEdff47f25384cdc3);
+    IComet constant cometMarketUsdc = IComet(0xc3d688B66703497DAA19211EEdff47f25384cdc3);
 
     LibCollateralSwap.Collateral existingCollateral = LibCollateralSwap.Collateral(WBTC, 0.06e8);
     LibCollateralSwap.Collateral finalCollateral = LibCollateralSwap.Collateral(WETH, 1e18);
+    LibCollateralSwap.Collateral wrongFinalCollateral = LibCollateralSwap.Collateral(USDC, 1e6);
 
     event SupplyCollateral(address indexed from, address indexed dst, address indexed asset, uint amount);
     event WithdrawCollateral(address indexed src, address indexed to, address indexed asset, uint amount);
@@ -41,20 +43,26 @@ contract WidoCollateralSwapTest is MainnetForkTest {
 
         // Create different contracts instances
         widoCollateralSwap_Aave = new WidoCollateralSwap_Aave(
-            aaveAddressesProvider
+            aaveAddressesProvider,
+            cometMarketUsdc,
+            payable(address(widoRouter))
         );
         widoCollateralSwap_Equalizer = new WidoCollateralSwap_ERC3156(
-            equalizerLender
+            equalizerLender,
+            cometMarketUsdc,
+            payable(address(widoRouter))
         );
 
         mockSwap = new MockSwap(
             ERC20(WETH),
-            ERC20(WBTC)
+            ERC20(WBTC),
+            ERC20(USDC)
         );
 
         // deal necessary token amounts
         deal(existingCollateral.addr, user1, existingCollateral.amount);
         deal(finalCollateral.addr, address(mockSwap), finalCollateral.amount.mul(2));
+        deal(wrongFinalCollateral.addr, address(mockSwap), wrongFinalCollateral.amount);
 
         // start impersonating user
         vm.startPrank(user1);
@@ -77,14 +85,6 @@ contract WidoCollateralSwapTest is MainnetForkTest {
 
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
-
-        // define expected Event
-        vm.expectEmit(true, true, false, false);
-        emit SupplyCollateral(address(_collateralSwap), user1, address(0), 0);
-
-        // define expected Event
-        vm.expectEmit(true, true, false, false);
-        emit WithdrawCollateral(user1, address(_collateralSwap), address(0), 0);
 
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
@@ -110,11 +110,15 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             revokeSignature
         );
 
-        LibCollateralSwap.WidoSwap memory swap = LibCollateralSwap.WidoSwap(
-            address(widoRouter),
-            address(widoTokenManager),
-            _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap))
-        );
+        bytes memory swapCallData = _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap));
+
+        // define expected Event
+        vm.expectEmit(true, true, false, false);
+        emit SupplyCollateral(address(_collateralSwap), user1, address(0), 0);
+
+        // define expected Event
+        vm.expectEmit(true, true, false, false);
+        emit WithdrawCollateral(user1, address(_collateralSwap), address(0), 0);
 
         /** Act */
 
@@ -122,8 +126,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc)
+            swapCallData
         );
 
         /** Assert */
@@ -156,14 +159,6 @@ contract WidoCollateralSwapTest is MainnetForkTest {
         // track the initial principal
         int104 initialPrincipal = _userPrincipal(user1);
 
-        // define expected Event
-        vm.expectEmit(true, true, false, false);
-        emit SupplyCollateral(address(_collateralSwap), user1, address(0), 0);
-
-        // define expected Event
-        vm.expectEmit(true, true, false, false);
-        emit WithdrawCollateral(user1, address(_collateralSwap), address(0), 0);
-
         // generate allow signature
         uint256 nonce = cometUsdc.userNonce(user1);
         LibCollateralSwap.Signature memory allowSignature = _sign(
@@ -191,11 +186,15 @@ contract WidoCollateralSwapTest is MainnetForkTest {
         // increase output amount to fake positive slippage
         uint256 _outputAmount = finalCollateral.amount.add(1000);
 
-        LibCollateralSwap.WidoSwap memory swap = LibCollateralSwap.WidoSwap(
-            address(widoRouter),
-            address(widoTokenManager),
-            _generateWidoRouterCalldata(existingCollateral, finalCollateral, _outputAmount, address(_collateralSwap))
-        );
+        bytes memory swapCallData = _generateWidoRouterCalldata(existingCollateral, finalCollateral, _outputAmount, address(_collateralSwap));
+
+        // define expected Event
+        vm.expectEmit(true, true, false, false);
+        emit SupplyCollateral(address(_collateralSwap), user1, address(0), 0);
+
+        // define expected Event
+        vm.expectEmit(true, true, false, false);
+        emit WithdrawCollateral(user1, address(_collateralSwap), address(0), 0);
 
         /** Act */
 
@@ -203,8 +202,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc)
+            swapCallData
         );
 
         /** Assert */
@@ -259,11 +257,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
         // increase output amount to fake negative slippage
         uint256 _outputAmount = finalCollateral.amount.sub(1000);
 
-        LibCollateralSwap.WidoSwap memory swap = LibCollateralSwap.WidoSwap(
-            address(widoRouter),
-            address(widoTokenManager),
-            _generateWidoRouterCalldata(existingCollateral, finalCollateral, _outputAmount, address(_collateralSwap))
-        );
+        bytes memory swapCallData = _generateWidoRouterCalldata(existingCollateral, finalCollateral, _outputAmount, address(_collateralSwap));
 
         /** Assert */
 
@@ -275,8 +269,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc)
+            swapCallData
         );
     }
 
@@ -310,11 +303,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             revokeSignature
         );
 
-        LibCollateralSwap.WidoSwap memory swap = LibCollateralSwap.WidoSwap(
-            address(widoRouter),
-            address(widoTokenManager),
-            _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap))
-        );
+        bytes memory swapCallData = _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap));
 
         /** Assert */
 
@@ -326,8 +315,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc)
+            swapCallData
         );
     }
 
@@ -361,11 +349,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             revokeSignature
         );
 
-        LibCollateralSwap.WidoSwap memory swap = LibCollateralSwap.WidoSwap(
-            address(widoRouter),
-            address(widoTokenManager),
-            _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap))
-        );
+        bytes memory swapCallData =  _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap));
 
         /** Assert */
 
@@ -377,8 +361,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc)
+            swapCallData
         );
     }
 
@@ -412,11 +395,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             revokeSignature
         );
 
-        LibCollateralSwap.WidoSwap memory swap = LibCollateralSwap.WidoSwap(
-            address(widoRouter),
-            address(widoTokenManager),
-            _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap))
-        );
+        bytes memory swapCallData =  _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap));
 
         /** Assert */
 
@@ -428,8 +407,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc)
+            swapCallData
         );
     }
 
@@ -463,11 +441,7 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             revokeSignature
         );
 
-        LibCollateralSwap.WidoSwap memory swap = LibCollateralSwap.WidoSwap(
-            address(widoRouter),
-            address(widoTokenManager),
-            _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap))
-        );
+        bytes memory swapCallData =  _generateWidoRouterCalldata(existingCollateral, finalCollateral, finalCollateral.amount, address(_collateralSwap));
 
         /** Assert */
 
@@ -479,8 +453,53 @@ contract WidoCollateralSwapTest is MainnetForkTest {
             existingCollateral,
             finalCollateral,
             sigs,
-            swap,
-            address(cometUsdc)
+            swapCallData
+        );
+    }
+
+    function test_revertWhen_SwapToWrongOutputToken(uint8 _p) public {
+        /** Arrange */
+
+        Provider provider = _getProvider(_p);
+        IWidoCollateralSwap _collateralSwap = _getContract(provider);
+
+        // generate allow signature
+        uint256 nonce = cometUsdc.userNonce(user1);
+        LibCollateralSwap.Signature memory allowSignature = _sign(
+            user1,
+            address(_collateralSwap),
+            true,
+            nonce,
+            10e9
+        );
+
+        // generate revoke signature
+        LibCollateralSwap.Signature memory revokeSignature = _sign(
+            user1,
+            address(_collateralSwap),
+            false,
+            nonce.add(1),
+            10e9
+        );
+
+        LibCollateralSwap.Signatures memory sigs = LibCollateralSwap.Signatures(
+            allowSignature,
+            revokeSignature
+        );
+
+        bytes memory swapCallData =  _generateWidoRouterCalldata(existingCollateral, wrongFinalCollateral, wrongFinalCollateral.amount, address(_collateralSwap));
+
+        /** Assert */
+
+        vm.expectRevert(bytes4(0xd49aa893));
+
+        /** Act */
+
+        _collateralSwap.swapCollateral(
+            existingCollateral,
+            finalCollateral,
+            sigs,
+            swapCallData
         );
     }
 
@@ -587,8 +606,14 @@ contract WidoCollateralSwapTest is MainnetForkTest {
         IWidoRouter.Step[] memory steps = new IWidoRouter.Step[](1);
         steps[0].targetAddress = address(mockSwap);
         steps[0].fromToken = _existingCollateral.addr;
+
+        string memory swapFunction = "swapWbtcToWeth(uint256,uint256,address)";
+        if (_finalCollateral.addr == address(USDC)) {
+            swapFunction = "swapWbtcToUsdc(uint256,uint256,address)";
+        }
+
         steps[0].data = abi.encodeWithSignature(
-            "swapWbtcToWeth(uint256,uint256,address)",
+            swapFunction,
             _existingCollateral.amount,
             _amountOut,
             address(widoRouter)
